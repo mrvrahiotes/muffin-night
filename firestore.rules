@@ -37,6 +37,14 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create, update: if signedIn() && request.resource.data.keys().size() < 20;
     }
+    match /statthemes/{doc} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() && request.resource.data.keys().size() < 120;
+    }
+    match /usage/{doc} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() && request.resource.data.keys().size() < 800;
+    }
     match /statsurvey/{doc} {
       allow read: if isAdmin();
       allow create, update: if signedIn() && request.resource.data.keys().size() < 20;

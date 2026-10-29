@@ -60,7 +60,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 1.9</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 1.10</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -1058,7 +1058,7 @@ function stCard(){if(!IS_OWNER)return "";let h=`<div class="card" style="border-
  if(!tot&&!svy.length&&!f.length)h+=`<p class="note" style="margin-top:8px">No counts yet. They appear as people opt in and use the app.</p>`;
  return h+`</div>`}
 /* ---------- AI coach (optional, private to each person) ---------- */
-const COACH_URL="";
+const COACH_URL="https://coach-560670888509.us-east1.run.app";
 let coachBusy=false,coachCtx=false;
 function cKey(){return "mn_coach_"+(FB_USER?FB_USER.uid:"x")}
 function cOk(){try{return localStorage.getItem(cKey()+"_ok")==="1"}catch(e){return false}}

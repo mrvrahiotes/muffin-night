@@ -3,7 +3,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const FB_CONFIG={apiKey:"AIzaSyB8hBE2gn4CTTnOCQt2aAIvGZ435V7SYso",authDomain:"muffin-night.firebaseapp.com",projectId:"muffin-night",storageBucket:"muffin-night.firebasestorage.app",messagingSenderId:"560670888509",appId:"1:560670888509:web:d251c6bd1d501cb31d5054"};
-const ADMIN_EMAILS=["__ADMIN_EMAIL__"];
+const ADMIN_EMAILS=["mvrahiotes@gmail.com"];
 firebase.initializeApp(FB_CONFIG);const fauth=firebase.auth(),fdb=firebase.firestore();
 let FB_USER=null,FB_CID=null,FB_CODE=null,FB_MEMBERS=1;
 function shimUI(html){let g=document.getElementById('authgate');if(!g){g=document.createElement('div');g.id='authgate';g.style.cssText='position:fixed;inset:0;z-index:80;background:var(--bg);overflow:auto;padding:calc(32px + env(safe-area-inset-top,0px)) 16px 32px';document.body.appendChild(g)}g.innerHTML=`<div style="max-width:480px;margin:0 auto">${html}</div>`;return g}

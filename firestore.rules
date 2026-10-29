@@ -28,6 +28,19 @@ service cloud.firestore {
         allow read, write: if member(cid);
       }
     }
+    // Anonymous counts: anyone signed in can add to counters; only the owner can read them.
+    match /stats/{doc} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() && request.resource.data.keys().size() < 300;
+    }
+    match /statcards/{doc} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() && request.resource.data.keys().size() < 20;
+    }
+    match /statsurvey/{doc} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() && request.resource.data.keys().size() < 20;
+    }
     match /feedback/{id} {
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid
         && request.resource.data.text is string && request.resource.data.text.size() < 5000;

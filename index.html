@@ -60,7 +60,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div><p class="note" style="margin-top:8px">App version 1.7</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 1.8</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -532,7 +532,8 @@ function applyDeck(){const up=unparked();D.forEach(c=>{const rm=S.removed[c.k]||
 function rt(v){return S.ratings[v]||{}}
 function sv(p,v){if(!S.survey||!S.survey[p])return;if(S.survey[p].a&&S.survey[p].a[v])return S.survey[p].a[v];return S.survey[p].done?svAns(p,v):undefined}
 function blocked(v){const r=rt(v);if(r.his==="no"||r.her==="no")return true;if(r.his||r.her)return false;return sv("his",v)==="no"||sv("her",v)==="no"}
-function weight(v){const r=rt(v);if(blocked(v))return 0;let w=1;
+function weight(v){const w0=weight0(v);return w0?w0*learnF(v):0}
+function weight0(v){const r=rt(v);if(blocked(v))return 0;let w=1;
   const sc={love:1,ok:0,no:0};const n=(r.his==="love")+(r.her==="love");
   if(n===2)w=3;else if(n===1)w=1.8;
   if(r.his==="ok"||r.her==="ok")w*=0.7;
@@ -610,7 +611,7 @@ function extrasNight(){const c=ck();hand=hand.filter(e=>e.k!=="start"&&e.k!=="af
 function afterLine(){const af=["her","his"].map(p=>{const x=(S.survey[p].n||{}).after;return x&&String(x).trim()?`<b style="color:var(--fg)">${p==="her"?"Her":"Him"}:</b> ${esc(String(x).trim())}`:""}).filter(Boolean);return af.length?af.join("<br>"):"Stay close for a few minutes: cuddle, water, and a little talk."}
 function connect(){mode="connect";hand=[{k:"set",v:wpick(THEMES[0].c.filter(v=>C("set").i.includes(v)&&!blocked(v)&&!/erotic|ends how/.test(v)))||"Slow dance in the living room"},{k:"rq",v:P(C("rq").i)},{k:"rq",v:P(C("rq").i)}];render()}
 function easy(){mode="easy";hand=EASY.map(([k,v])=>({k,v}));extrasNight();keepCurrent();render()}
-function keepCurrent(){S.current={date:new Date().toISOString(),cards:hand.filter(x=>x.v&&C(x.k)).map(x=>({k:x.k,v:x.v}))};save()}
+function keepCurrent(){S.current={date:new Date().toISOString(),lead:(herTurn?turnWho:leadOf()),lvl:(()=>{const c=ck();if(!c)return null;const a=[c.his.lvl,c.her.lvl].filter(x=>typeof x==="number");return a.length?Math.min(...a):null})(),cards:hand.filter(x=>x.v&&C(x.k)).map(x=>({k:x.k,v:x.v}))};save()}
 function coupon(){const v=wpick(C("cou").i.filter(v=>!blocked(v)));extra={t:"IOU for later",v,k:"cou",iou:true};render()}
 function iouList(){S.ious=S.ious||[];return S.ious}
 function giveOwnIOU(){const e=document.getElementById('iouown'),t=e?e.value.trim():"";if(!t){setSave("Type your IOU first.");return}extra={t:"IOU for later",v:t,k:"cou",iou:true};giveIOU()}
@@ -661,7 +662,7 @@ function saveAAR(){
  aar.cards.forEach(c=>{const st=STEP[c.v];if(st){const pr=prog(st[0]);let own=trOwners(st[0]);if(!own.length)own=["her","his"];if(own.every(p=>c[p]==="love"||c[p]==="ok"))pr.lvl=Math.max(pr.lvl,st[1]+1);if(own.some(p=>c[p]==="no"))pr.paused=true}});applyDeck();
  aar.cards.forEach(c=>{if(STEP[c.v])return;const r=Object.assign({},rt(c.v));if(c.his)r.his=c.his;if(c.her)r.her=c.her;S.ratings[c.v]=r});
  S.press=(S.press||[]);S.press.unshift([aar.press.his,aar.press.her]);S.press=S.press.slice(0,6);
- S.reports.unshift({date:S.current.date,cards:aar.cards,conn:aar.conn,ans:aar.ans});S.reports=S.reports.slice(0,40);
+ S.reports.unshift({date:S.current.date,lead:S.current.lead||null,lvl:S.current.lvl==null?null:S.current.lvl,cards:aar.cards,conn:aar.conn,ans:aar.ans});try{statNight(aar)}catch(e){}S.reports=S.reports.slice(0,40);
  S.current=null;aar=null;tabNow="us";dclear("q_");try{localStorage.removeItem("mn_aar")}catch(e){}save();render()}
 
 /* ---------- deck edits ---------- */
@@ -743,7 +744,7 @@ function svNew(p){const d=svDis(p);return svPending(p).filter(x=>!d.includes(x.i
 function svLater(p){try{localStorage.setItem('mn_svdis_'+p,JSON.stringify(svPending(p).map(x=>x.id)))}catch(e){}render()}
 function svGo(p){const L=svNew(p);const list=L.length?L:svPending(p);tabNow='survey';svStart(p);if(list.length){svStep=Math.min(...list.map(x=>x.step));if(svStep===SV_TPAGES+3)svMore=true}render();window.scrollTo(0,0)}
 function svNext(d){if(svWho&&svStep===SV_TPAGES+1&&d>0&&!S.survey[svWho].styleSeen){S.survey[svWho].styleSeen=true;save()}if(svWho&&svStep===SV_TPAGES+2&&d>0){const so=soloOf(S.survey[svWho]);if(!so.seen){so.seen=true;save()}}svStep+=d;svOpen=null;render();window.scrollTo(0,0)}
-function svFinish(){SV_NOTES.forEach(([id])=>{const el=document.getElementById('sn_'+id);if(el&&(el.value.trim()||!S.survey[svWho].n[id]))S.survey[svWho].n[id]=el.value.trim()});const sh=document.getElementById('sv_share');S.survey[svWho].shared=!!(sh&&sh.checked);const wl=document.getElementById('sv_wish');S.survey[svWho].wish=!!(wl&&wl.checked);SV_NOTES.forEach(([id])=>{const v=S.survey[svWho].n[id];if(v)ansQueue(svWho,id,v)});ansFlush(svWho);S.survey[svWho].done=true;svWho=null;save();render();window.scrollTo(0,0)}
+function svFinish(){SV_NOTES.forEach(([id])=>{const el=document.getElementById('sn_'+id);if(el&&(el.value.trim()||!S.survey[svWho].n[id]))S.survey[svWho].n[id]=el.value.trim()});const sh=document.getElementById('sv_share');S.survey[svWho].shared=!!(sh&&sh.checked);const wl=document.getElementById('sv_wish');S.survey[svWho].wish=!!(wl&&wl.checked);SV_NOTES.forEach(([id])=>{const v=S.survey[svWho].n[id];if(v)ansQueue(svWho,id,v)});ansFlush(svWho);S.survey[svWho].done=true;try{statSurvey(svWho)}catch(e){}svWho=null;save();render();window.scrollTo(0,0)}
 function svRedo(p){S.survey[p].done=false;svStart(p)}
 function themeLabel(p,id){const x=(S.survey[p].t||{})[id];return x}
 function vSurvey(){
@@ -824,6 +825,7 @@ function vSurvey(){
  <li><b>Just the two of you.</b> Only the two accounts linked by your couple code can open your space.</li>
  <li><b>Locked with your passphrase.</b> Everything is scrambled on your phones before it's saved. Without the passphrase it can't be read, not by the people who make Muffin Night and not by Google, which stores it.</li>
  <li><b>Not AI.</b> Nothing you enter is sent to an AI.</li>
+ <li><b>Anonymous counts, only if you say yes.</b> If you opt in, the app shares counts like how often each card is rated love. Never your writing, names, or anything that points back to you two.</li>
  <li><b>You can erase it.</b> "Delete all our data" on the Us tab wipes everything at once.</li></ul></div>
  <div class="grid2">${["her","his"].map(p=>`<div class="card"><p class="lbl">${p==="her"?"Her":"Him"}</p><p class="val">${st(p)}</p><button class="${S.survey[p].done?'':'primary'} full" style="margin-top:8px" onclick="${S.survey[p].done?`svRedo('${p}')`:`svStart('${p}')`}">${S.survey[p].done?'Retake':started(p)?'Continue':'Start'}</button></div>`).join('')}</div>
  ${["her","his"].map(p=>{const o=S.survey[p];if(!o.done)return'';const nm=p==="her"?"Her":"His",ot=p==="her"?"him":"her";
@@ -842,7 +844,7 @@ const LVL=[[0,"Not tonight"],[1,"Low"],[2,"Maybe"],[3,"Open to it"],[4,"Into it"
 const NEEDS=[["connect","Connection"],["fun","Fun"],["release","Release"],["rest","Rest"]];
 let romQ=null,romHQ=null,romMQ=null,romSub="ask",qWho="both",profWho="her";
 function prof(p){S.prof=S.prof||{};const o=S.prof[p]=(S.prof[p]&&typeof S.prof[p]==="object")?S.prof[p]:{};if(!Array.isArray(o.ll))o.ll=[];if(!o.acc||typeof o.acc!=="object")o.acc={};if(!o.brk||typeof o.brk!=="object")o.brk={};if(typeof o.on!=="string")o.on="";if(typeof o.off!=="string")o.off="";return o}
-function setCk(p,key,val){const t=today();if(!S.checkin||typeof S.checkin!=="object")S.checkin={};const c=S.checkin;const old=c.date;c.date=t;if(!c[p]||typeof c[p]!=="object"||(c[p].d?c[p].d!==t:old!==t))c[p]={d:t};c[p].d=t;c[p][key]=val;if(p==='her'&&key==='lvl')cLogLvl(val);save();render()}
+function setCk(p,key,val){if(key==='lvl'&&p===me())sInc('stats/checkins',{['lvl_'+val]:1});const t=today();if(!S.checkin||typeof S.checkin!=="object")S.checkin={};const c=S.checkin;const old=c.date;c.date=t;if(!c[p]||typeof c[p]!=="object"||(c[p].d?c[p].d!==t:old!==t))c[p]={d:t};c[p].d=t;c[p][key]=val;if(p==='her'&&key==='lvl')cLogLvl(val);save();render()}
 function toggleLL(p,id){const o=prof(p);const i=o.ll.indexOf(id);if(i>=0)o.ll.splice(i,1);else{o.ll.push(id);if(o.ll.length>2)o.ll.shift()}save();render()}
 function saveProf(p){const o=prof(p);AREAS.forEach(([a])=>{const x=document.getElementById(`acc_${p}_${a}`),y=document.getElementById(`brk_${p}_${a}`);if(x)o.acc[a]=x.value.trim();if(y)o.brk[a]=y.value.trim()});
  ["on","off"].forEach(k=>{const e=document.getElementById(`pf_${p}_${k}`);if(e)o[k]=e.value.trim()});save();render();setSave("Profile saved")}
@@ -998,6 +1000,63 @@ async function fbSend(){const t=document.getElementById('fbtext'),v=t?t.value.tr
  try{const id=String(Date.now());await DB.doc("feedback/"+id).set({id,kind:fbKind,text:v,tab:tabNow,from:me()||"",date:new Date().toISOString()});t.value="";fbClose();setSave("Thanks! Feedback sent.")}catch(e){setSave("Feedback didn't send. Try again.")}}
 async function fbLoad(){if(!DB||!IS_OWNER)return;try{const q=await DB.collection("feedback").get();FBL=q.docs.map(d=>d.data()).sort((a,b)=>String(b.date).localeCompare(String(a.date)));render()}catch(e){}}
 function fbCard(){if(!IS_OWNER)return "";const L=FBL||[];return `<div class="card" style="border-color:var(--accent)"><div class="row"><p class="lbl grow">Tester feedback${L.length?' · '+L.length:''}</p><button style="min-height:30px;padding:2px 10px;font-size:13px" onclick="fbShow=!fbShow;if(fbShow)fbLoad();render()">${fbShow?'Hide':'Show'}</button></div><p class="note" style="margin-top:4px">Only you see this. It shows only what testers send with the Feedback button.</p>${fbShow?(L.length?L.map(f=>`<div style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px"><p class="lbl">${esc(f.kind||'')} · ${esc(f.tab||'')} · ${esc(f.from==='her'?'her phone':f.from==='his'?'his phone':'')} · ${esc(new Date(f.date).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}</p><p style="margin:4px 0 0;white-space:pre-wrap">${esc(f.text||'')}</p></div>`).join(''):'<p class="note" style="margin-top:8px">No feedback yet.</p>'):''}</div>`}
+/* ---------- learning from your own nights (on this phone only) ---------- */
+let LRN=null,LRNk="";
+function v2k(){if(v2k.m)return v2k.m;const m={};Object.keys(BASE).forEach(k=>BASE[k].forEach(v=>{if(!m[v])m[v]=k}));return v2k.m=m}
+function learn(){const R=(S.reports||[]).filter(r=>r&&r.date);const key=R.length+":"+(R[0]&&R[0].date);if(LRN&&LRNk===key)return LRN;LRNk=key;
+ const sc=r=>{const a=[r.conn&&r.conn.his,r.conn&&r.conn.her].filter(x=>typeof x==="number");return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
+ const grp=(f)=>{const g={};R.forEach(r=>{const s2=sc(r);if(s2==null)return;const k=f(r);if(k==null)return;(g[k]=g[k]||[]).push(s2)});return Object.entries(g).map(([k,a])=>({k,n:a.length,avg:a.reduce((x,y)=>x+y,0)/a.length}))};
+ const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],tod=h=>h<11?"mornings":h<17?"afternoons":h<21?"evenings":"late nights";
+ const days=grp(r=>DAYS[new Date(r.date).getDay()]),times=grp(r=>tod(new Date(r.date).getHours())),leads=grp(r=>r.lead||null);
+ const cat={},last={},both={};R.forEach(r=>(r.cards||[]).forEach(c=>{const k=c.k||v2k()[c.v];if(!k)return;cat[k]=cat[k]||{love:0,n:0};["his","her"].forEach(p=>{if(c[p]){cat[k].n++;if(c[p]==="love")cat[k].love++}});if(!last[c.v]||r.date>last[c.v])last[c.v]=r.date;if(c.his==="love"&&c.her==="love")both[c.v]=(both[c.v]||0)+1}));
+ let tl=0,tn=0;Object.values(cat).forEach(x=>{tl+=x.love;tn+=x.n});const base=tn?tl/tn:0;
+ const catF={};Object.entries(cat).forEach(([k,x])=>{if(x.n>=5&&base>0){catF[k]=Math.max(0.8,Math.min(1.4,(x.love/x.n)/base))}});
+ const recent=new Set();R.slice(0,2).forEach(r=>(r.cards||[]).forEach(c=>recent.add(c.v)));
+ const idle=Object.keys(both).filter(v=>last[v]&&(Date.now()-new Date(last[v]))/864e5>21);
+ return LRN={n:R.length,days,times,leads,cat,catF,recent,idle:new Set(idle),both}}
+function learnF(v){const L=learn();if(L.n<3)return 1;let f=1;const k=v2k()[v];if(k&&L.catF[k])f*=L.catF[k];if(L.recent.has(v))f*=0.5;if(L.idle.has(v))f*=1.4;return f}
+const CATN={set:"date-night setups",fit:"outfits",fore:"foreplay",play:"play cards",pos:"positions",loc:"locations",her:"her finishes",his:"his finishes"};
+function patternsHTML(){const L=learn();if(L.n<3)return `<div class="card"><p class="lbl">Your patterns</p><p class="note" style="margin-top:4px">After ${3-L.n} more ${3-L.n===1?"night":"nights"} with Pillow talk, the app starts showing what your best nights have in common, and it quietly deals more of what works for you two.</p></div>`;
+ const best=a=>a.filter(x=>x.n>=2).sort((x,y)=>y.avg-x.avg)[0];const d=best(L.days),t=best(L.times),l=best(L.leads);
+ const cats=Object.entries(L.cat).filter(([k,x])=>x.n>=4).map(([k,x])=>({k,r:x.love/x.n})).sort((a,b)=>b.r-a.r);
+ const lines=[];if(d)lines.push(`Your best-rated nights tend to fall on <b>${d.k}s</b>.`);if(t)lines.push(`They're best in the <b>${t.k}</b>.`);
+ if(l)lines.push(`Your highest-rated nights so far: <b>${l.k==="her"?"when she leads":l.k==="his"?"when he leads":"when you take turns"}</b>.`);
+ if(cats[0])lines.push(`You love <b>${CATN[cats[0].k]||cats[0].k}</b> most${cats.length>1&&cats[cats.length-1].r<cats[0].r?`, and <b>${CATN[cats[cats.length-1].k]||cats[cats.length-1].k}</b> least`:""}.`);
+ const idle=[...L.idle].slice(0,3);
+ return `<div class="card"><p class="lbl">Your patterns · from ${L.n} nights</p>${lines.length?lines.map(x=>`<p style="margin:6px 0 0">${x}</p>`).join(''):'<p class="note" style="margin-top:4px">Not enough ratings yet to spot a pattern.</p>'}${idle.length?`<p class="note" style="margin-top:8px">Loved by you both but not done in 3+ weeks: ${idle.map(esc).join(' · ')}. These come up more often now.</p>`:''}<p class="note" style="margin-top:8px">Worked out on your phones from your own ratings. The app also deals more of what you love and less of what you just did.</p></div>`}
+/* ---------- anonymous stats (opt-in, counts only) ---------- */
+function statsOn(){const m=me();return !!(m&&S.statsOpt&&S.statsOpt[m]===true&&typeof fdb!=="undefined"&&FB_USER)}
+function hsh(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return "c"+(h>>>0).toString(36)}
+function isBuiltIn(k,v){return !!(BASE[k]&&BASE[k].includes(v))}
+function sInc(doc,fields,extra){if(!statsOn())return;try{const o={};Object.keys(fields).forEach(f=>{o[f]=firebase.firestore.FieldValue.increment(fields[f])});if(extra)Object.assign(o,extra);fdb.doc(doc).set(o,{merge:true}).catch(()=>{})}catch(e){}}
+function statTab(t){if(!statsOn())return;const k="mn_st_"+today()+"_"+t;try{if(localStorage.getItem(k))return;localStorage.setItem(k,"1")}catch(e){return}sInc("stats/features",{["tab_"+t]:1})}
+function statNight(a){if(!statsOn()||!a)return;const m=me();const f={nights:1};const c=a.conn&&a.conn[m];if(typeof c==="number"){f.conn_sum=c;f.conn_n=1}if(S.current&&S.current.lead)f["lead_"+S.current.lead]=1;sInc("stats/nights",f);
+ (a.cards||[]).forEach(c=>{const k=c.k||v2k()[c.v];if(!k||!isBuiltIn(k,c.v)||!c[m])return;sInc("statcards/"+hsh(c.v),{[m+"_"+c[m]]:1},{k,v:c.v})})}
+function statSurvey(p){if(!statsOn()||me()!==p)return;S.statsSv=S.statsSv||{};if(S.statsSv[p])return;S.statsSv[p]=true;save();
+ const ops=[],seen=new Set();Object.keys(BASE).forEach(k=>BASE[k].forEach(v=>{if(seen.has(v))return;seen.add(v);const a=sv(p,v);if(a)ops.push([v,k,a])}));
+ for(let i=0;i<ops.length;i+=400){const b=fdb.batch();ops.slice(i,i+400).forEach(([v,k,a])=>b.set(fdb.doc("statsurvey/"+hsh(v)),{k,v,[p+"_"+a]:firebase.firestore.FieldValue.increment(1)},{merge:true}));b.commit().catch(()=>{})}
+ sInc("stats/people",{["survey_"+p]:1})}
+function setStats(on){const m=me();if(!m)return;S.statsOpt=S.statsOpt||{};S.statsOpt[m]=!!on;save();render();if(on){sInc("stats/people",{["optin_"+m]:1});if(S.survey[m]&&S.survey[m].done)statSurvey(m)}if(typeof rtoast==="function")rtoast(on?"Thanks! Only anonymous counts are shared, never what you write.":"Okay. Nothing is shared.")}
+function statsAsk(){const m=me();if(!m||!FB_USER||(S.statsOpt&&typeof S.statsOpt[m]==="boolean"))return "";return `<div class="card" style="margin-bottom:12px"><p class="lbl">Help make Muffin Night better</p><p class="note" style="margin-top:4px">Can the app share <b>anonymous counts</b> from your side, like how often each card gets rated love, which screens get used, and check-in levels? Never your writing, names, or anything that points back to you two. You can change this anytime in More, Guide.</p><div class="grid2" style="margin-top:8px"><button onclick="setStats(false)">No thanks</button><button class="primary" onclick="setStats(true)">Yes, share counts</button></div></div>`}
+function statsToggle(){const m=me();if(!m||!FB_USER)return "";const on=!!(S.statsOpt&&S.statsOpt[m]);return `<p class="lbl" style="margin-top:12px">Anonymous counts</p><p class="note" style="margin-top:4px">${on?"On: your side shares anonymous counts only.":"Off: nothing is shared."}</p><button style="margin-top:6px" onclick="setStats(${on?"false":"true"})">${on?"Turn off":"Turn on"}</button>`}
+/* ---------- owner: app stats ---------- */
+let STX=null,stShow=false;
+async function stLoad(){if(!IS_OWNER)return;try{const g=async d=>{const x=await fdb.doc(d).get();return x.exists?x.data():{}};const q=async c=>(await fdb.collection(c).get()).docs.map(d=>d.data());STX={f:await g("stats/features"),n:await g("stats/nights"),ck:await g("stats/checkins"),pp:await g("stats/people"),cards:await q("statcards"),sv:await q("statsurvey")};render()}catch(e){STX={err:String(e&&e.message||e)};render()}}
+function stCard(){if(!IS_OWNER)return "";let h=`<div class="card" style="border-color:var(--accent)"><div class="row"><p class="lbl grow">App stats · all couples</p><button style="min-height:30px;padding:2px 10px;font-size:13px" onclick="stShow=!stShow;if(stShow)stLoad();render()">${stShow?'Hide':'Show'}</button></div><p class="note" style="margin-top:4px">Anonymous counts from people who opted in. No names, no writing.</p>`;
+ if(!stShow)return h+`</div>`;if(!STX)return h+`<p class="note" style="margin-top:8px">Loading…</p></div>`;if(STX.err)return h+`<p class="note" style="margin-top:8px">Couldn't load: ${esc(STX.err)}</p></div>`;
+ const n=STX.n||{},pp=STX.pp||{};const tot=(n.nights||0),avg=n.conn_n?(n.conn_sum/n.conn_n).toFixed(1):"–";
+ h+=`<p style="margin:8px 0 0"><b>${(pp.optin_his||0)+(pp.optin_her||0)}</b> ${((pp.optin_his||0)+(pp.optin_her||0))===1?"person":"people"} opted in · <b>${tot}</b> night ratings · avg connection <b>${avg}</b></p>`;
+ if(n.lead_his||n.lead_her)h+=`<p class="note">Nights led by him ${n.lead_his||0} · by her ${n.lead_her||0}</p>`;
+ const f=Object.entries(STX.f||{}).filter(([k])=>k.startsWith("tab_")).sort((a,b)=>b[1]-a[1]).slice(0,8);if(f.length)h+=`<p class="lbl" style="margin-top:10px">Most-used screens (days opened)</p><p class="note">${f.map(([k,v])=>esc(k.slice(4))+" "+v).join(" · ")}</p>`;
+ const ck=STX.ck||{};const ckk=Object.keys(ck).filter(k=>k.startsWith("lvl_")).sort();if(ckk.length)h+=`<p class="lbl" style="margin-top:10px">Check-in levels</p><p class="note">${ckk.map(k=>"level "+k.slice(4)+": "+ck[k]).join(" · ")}</p>`;
+ const rate=c=>{const L=(c.his_love||0)+(c.her_love||0),N=L+(c.his_ok||0)+(c.her_ok||0)+(c.his_no||0)+(c.her_no||0);return {L,N,r:N?L/N:0,no:(c.his_no||0)+(c.her_no||0)}};
+ const cr=(STX.cards||[]).map(c=>Object.assign({v:c.v},rate(c))).filter(x=>x.N>=3);
+ if(cr.length){h+=`<p class="lbl" style="margin-top:10px">Most loved cards</p>`+cr.slice().sort((a,b)=>b.r-a.r||b.N-a.N).slice(0,8).map(x=>`<p class="note">${Math.round(x.r*100)}% love · ${esc(x.v)} (${x.N})</p>`).join('');
+  const nos=cr.filter(x=>x.no).sort((a,b)=>b.no/b.N-a.no/a.N).slice(0,5);if(nos.length)h+=`<p class="lbl" style="margin-top:10px">Most often "not for us"</p>`+nos.map(x=>`<p class="note">${Math.round(x.no/x.N*100)}% · ${esc(x.v)} (${x.N})</p>`).join('')}
+ const svy=STX.sv||[];if(svy.length){const top=p=>svy.map(c=>({v:c.v,y:(c[p+"_yes"]||0)+(c[p+"_try"]||0),t:(c[p+"_yes"]||0)+(c[p+"_try"]||0)+(c[p+"_slow"]||0)+(c[p+"_no"]||0)})).filter(x=>x.t>=2).sort((a,b)=>b.y/b.t-a.y/a.t||b.t-a.t).slice(0,6);
+  ["her","his"].forEach(p=>{const T=top(p);if(T.length)h+=`<p class="lbl" style="margin-top:10px">Survey: most wanted on ${p==="her"?"her":"his"} side</p>`+T.map(x=>`<p class="note">${Math.round(x.y/x.t*100)}% yes or try · ${esc(x.v)} (${x.t})</p>`).join('')})}
+ if(!tot&&!svy.length&&!f.length)h+=`<p class="note" style="margin-top:8px">No counts yet. They appear as people opt in and use the app.</p>`;
+ return h+`</div>`}
 function pnm(p){const n=(S.names||{})[p];return n?esc(n)+"'s":(p==="her"?"her":"his")}
 function vHome(){sweepPhotos();const m=me();let h=`<div class="stack">`;
  if(!seen()){const svd=m&&S.survey[m]&&S.survey[m].done;
@@ -1076,7 +1135,7 @@ function photoHTML(n,m){if(!n.photo){if(n.photoGone==="flag")return n.from===m?`
 async function sendSpark(){const m=me(),el=document.getElementById('sptext');const t=el?el.value.trim():"";if(spBusy)return;if(!t&&!spPhoto){setSave("Finish the thought first.");return}if(!m)return;
  let photo=null;if(spPhoto){if(!spOk){setSave("Check the box first: flirty, not explicit.");return}spBusy=true;setSave("Sending your photo…");try{if(!DB)throw {code:"offline"};const pid="p"+Date.now();const durl=await new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.onerror=no;fr.readAsDataURL(spPhoto.blob)});await DB.doc("couple/photo_"+pid).set({img:durl});PHC[pid]=durl;photo={id:pid}}catch(e){spBusy=false;setSave("The photo didn't send. Check your connection and try again.");return}spBusy=false;URL.revokeObjectURL(spPhoto.prev);spPhoto=null;spOk=false}
  const text=(spPrompt?spPrompt+" ":"")+t;
- nList().unshift({id:Date.now(),from:m,to:m==="her"?"his":"her",cat:"spark",text,photo,date:new Date().toISOString(),hold:0,read:false,resp:"",reply:""});spPrompt=null;spDraft="";dclear("sptext");save();render();setSave(photo?"Spark and photo sent":"Spark sent")}
+ sInc("stats/features",{sparks:1,spark_photos:photo?1:0});nList().unshift({id:Date.now(),from:m,to:m==="her"?"his":"her",cat:"spark",text,photo,date:new Date().toISOString(),hold:0,read:false,resp:"",reply:""});spPrompt=null;spDraft="";dclear("sptext");save();render();setSave(photo?"Spark and photo sent":"Spark sent")}
 function sparkBox(){const m=me(),o=m==="her"?"him":"her",st=sparkStreak();
  return `<div class="card"><div class="row"><p class="lbl grow">Spark${sparkedToday(m)?' · sent today ✓':''}</p>${st?`<span class="pill">${st}-day streak</span>`:''}</div><p class="note" style="margin:4px 0 8px">A quick note during the day telling ${o} why ${o==="her"?"she's":"he's"} sexy right now. Takes ten seconds.</p>
  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${SPARKS.map(x=>`<button style="min-height:32px;padding:4px 10px;font-size:13px;border-radius:999px" class="${spPrompt===x?'primary':''}" onclick='spPrompt=${esc(JSON.stringify(x))};render();setTimeout(()=>{const e=document.getElementById("sptext");e&&e.focus()},0)'>${esc(x)}</button>`).join('')}</div>
@@ -1571,7 +1630,7 @@ function render(){setTimeout(restoreDrafts,0);setTimeout(autoSeen,1500);if(tabNo
  document.getElementById('tabs').innerHTML=sec[2].length>1?sec[2].map(k=>{const n=(TABS.find(t=>t[0]===k)||[k,k])[1],b=badge(k);return `<button class="${tabNow===k?'on':''}" onclick="tabNow='${k}';render();window.scrollTo(0,0)">${n}${b?` <span class="pill">${b}</span>`:''}</button>`}).join(''):'';
  document.getElementById('bnav').innerHTML=SECTIONS.map(([id,n,ks,ic])=>{const b=ks.reduce((a,k)=>a+badge(k),0);return `<button class="${sec[0]===id?'on':''}" aria-label="${n}" onclick="goSec('${id}')">${ic}<span>${n}</span>${b?`<span class="bdot">${b}</span>`:''}</button>`}).join('');
  const v=document.getElementById('view');
- try{ v.innerHTML=(tabNow==="home"&&FB_CODE&&FB_MEMBERS<2?`<div class="card" style="border-color:var(--accent);margin-bottom:12px"><p class="lbl">Invite your partner</p><p class="note" style="margin-top:4px">Your couple code is <b style="color:var(--fg);letter-spacing:.08em">${codeFmt()}</b>. Send it, and tell them the passphrase in person.</p>${codeBtns()}</div>`:"")+(tabNow==="home"?(fbCard()?`<div style="margin-bottom:12px">${fbCard()}</div>`:"")+(wnCard()?`<div style="margin-bottom:12px">${wnCard()}</div>`:""):"")+({dreams:()=>{const m=me();if(!m)return vNotes();return `<div class="stack"><div><h2>Dream log</h2></div>${vDreams()}</div>`},rp:vRP,extras:vExtras,learn:vLessons,swipe:vSwipe,dice:vDice,wish:vWish,spark:vSpark,mem:vMem,ideas:vIdeas,notes:vNotes,home:vHome,guide:vGuide,ch:vCh,rom:vRom,pos:vPos,survey:vSurvey,night:vNight,td:vTD,aar:vAAR,us:vUs,deck:vDeck})[tabNow]();}catch(err){v.innerHTML=`<div class="stack"><div class="card"><p class="q">This screen hit a snag</p><p class="note">Something in your saved data didn't load right. Try another tab, or reload. If it keeps happening, tap 💬 and say which screen.</p><p class="note" style="margin-top:6px;opacity:.7">${esc(String(err&&err.message||err))}</p></div></div>`;try{console.error(err)}catch(e){}}
+ try{ try{statTab(tabNow)}catch(e){}v.innerHTML=(tabNow==="home"?statsAsk()+(IS_OWNER?`<div style="margin-bottom:12px">${stCard()}</div>`:""):"")+(tabNow==="home"&&FB_CODE&&FB_MEMBERS<2?`<div class="card" style="border-color:var(--accent);margin-bottom:12px"><p class="lbl">Invite your partner</p><p class="note" style="margin-top:4px">Your couple code is <b style="color:var(--fg);letter-spacing:.08em">${codeFmt()}</b>. Send it, and tell them the passphrase in person.</p>${codeBtns()}</div>`:"")+(tabNow==="home"?(fbCard()?`<div style="margin-bottom:12px">${fbCard()}</div>`:"")+(wnCard()?`<div style="margin-bottom:12px">${wnCard()}</div>`:""):"")+({dreams:()=>{const m=me();if(!m)return vNotes();return `<div class="stack"><div><h2>Dream log</h2></div>${vDreams()}</div>`},rp:vRP,extras:vExtras,learn:vLessons,swipe:vSwipe,dice:vDice,wish:vWish,spark:vSpark,mem:vMem,ideas:vIdeas,notes:vNotes,home:vHome,guide:vGuide,ch:vCh,rom:vRom,pos:vPos,survey:vSurvey,night:vNight,td:vTD,aar:vAAR,us:vUs,deck:vDeck})[tabNow]();}catch(err){v.innerHTML=`<div class="stack"><div class="card"><p class="q">This screen hit a snag</p><p class="note">Something in your saved data didn't load right. Try another tab, or reload. If it keeps happening, tap 💬 and say which screen.</p><p class="note" style="margin-top:6px;opacity:.7">${esc(String(err&&err.message||err))}</p></div></div>`;try{console.error(err)}catch(e){}}
 }
 const LMAP=[
  [/^Squirt|squirt/i,"squirt"],[/G-spot and clit/i,"blended"],[/G-spot/i,"gspot"],[/Deep throat|Down her throat/i,"throat"],[/Anal toy|butt plug|anal beads/i,"analtoys"],[/Anal|In her ass|Vacuum seal|Butt crack|Double or triple/i,"analpen"],[/Swallow/i,"swallow"],
@@ -1617,7 +1676,7 @@ const MOVES=[
 let mvGrp="Tonight",mvPick=null,mvEdit=false;
 function myMoves(m){S.moves=S.moves||{};if(!Array.isArray(S.moves[m]))S.moves[m]=[];return S.moves[m]}
 function sendOwnMove(){const m=me(),e=document.getElementById('mvown'),t=e?e.value.trim():"";if(!t){setSave("Write your move first.");return}const keep=document.getElementById('mvkeep');if(keep&&keep.checked){const L=myMoves(m);if(!L.includes(t))L.push(t)}mvPick=null;sendSignal(t)}
-function sendSignal(t){const m=me();if(!m)return;mvPick=null;nList().unshift({id:Date.now(),from:m,to:m==="her"?"his":"her",cat:"signal",text:t,date:new Date().toISOString(),hold:0,read:false,resp:"",reply:""});save();render();setSave("Signal sent")}
+function sendSignal(t){const m=me();if(!m)return;sInc("stats/features",{moves:1});mvPick=null;nList().unshift({id:Date.now(),from:m,to:m==="her"?"his":"her",cat:"signal",text:t,date:new Date().toISOString(),hold:0,read:false,resp:"",reply:""});save();render();setSave("Signal sent")}
 function signalIn(m){return nList().filter(n=>n.cat==="signal"&&n.to===m&&!n.read&&dayKey(n.date)===today())}
 function signalCards(m,where){if(!m)return "";where=where||"today";const o=m==="her"?"him":"her",IN=signalIn(m),sentToday=nList().find(n=>n.cat==="signal"&&n.from===m&&dayKey(n.date)===today());let h="";
  IN.forEach(n=>{h+=`<div class="card" style="border-color:var(--accent);background:var(--accent-soft)"><p class="lbl">${m==="her"?"From him":"From her"}</p><p class="val big">${esc(n.text)}</p><button class="primary full" style="margin-top:8px" onclick="nList().find(x=>x.id===${n.id}).read=true;nList().find(x=>x.id===${n.id}).resp='love';save();render()">Got it ❤️</button></div>`});
@@ -1812,7 +1871,7 @@ function vUs(){
  let h=`<div class="stack">
  <div class="grid2"><div class="card"><p class="lbl">Nights reported</p><p class="val big" style="font-variant-numeric:tabular-nums">${S.reports.length}</p></div>
  <div class="card"><p class="lbl">Avg. connection</p><p class="val big" style="font-variant-numeric:tabular-nums">Him ${avg('his')} · Her ${avg('her')}</p></div></div>
-${datesHTML()}${lookbackHTML(true)}${pressHTML()}${progHTML()}
+${datesHTML()}${lookbackHTML(true)}${patternsHTML()}${pressHTML()}${progHTML()}
 ${wishHTML()}
  <div class="card"><h2>You both loved</h2><p class="note" style="margin:4px 0 6px">These come up about three times as often.</p>${list(loved,"Nothing yet. Rate cards after your first night.")}</div>
  <div class="card"><h2>Not for us</h2><p class="note" style="margin:4px 0 6px">Hidden from the app. Restore only if you've talked and both want it back.</p>${nos.length?nos.map(v=>`<span class="chip">${esc(v)}<button aria-label="Restore" onclick="restore(${esc(JSON.stringify(v))})">Restore</button></span>`).join(''):'<p class="note">Nothing hidden.</p>'}</div>

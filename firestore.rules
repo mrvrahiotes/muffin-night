@@ -49,6 +49,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create, update: if signedIn() && request.resource.data.keys().size() < 20;
     }
+    // Reminder times for push nudges (no content). Only the server reads them.
+    match /scheduled/{id} {
+      allow create: if signedIn() && request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().size() < 6;
+    }
     match /feedback/{id} {
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid
         && request.resource.data.text is string && request.resource.data.text.size() < 5000;

@@ -21,7 +21,66 @@ How you help:
 - If someone describes pressure, control, or one partner being pushed past a limit, side with consent and safety.
 - Keep answers short: usually under 200 words, a few short paragraphs or a brief list.`;
 
+const APP_URL = 'https://mrvrahiotes.github.io/muffin-night/';
+const MSG = {
+  spark: 'Something sweet is waiting for you 💌', move: 'Check Muffin Night 😉', dq: 'Your partner answered today\'s question 💬',
+  plan: 'A Muffin Night was planned 🧁', plan_suggest: 'A new time was suggested 🧁', week: 'Your partner filled in the weekly check-in 🗓️',
+  fix: 'Your partner would like to talk something through 🤝', break: 'Taking a 20-minute break. Back soon.', talk: 'A conversation is waiting 💬',
+  surprise: 'It\'s time. Open Muffin Night 😉', plan_today: 'Tonight\'s the night 🧁', dq_daily: 'Today\'s question is waiting 💬', week_rem: 'Time for your weekly check-in 🗓️'
+};
+async function sendTo(uid, kind) {
+  const db = admin.firestore();
+  const u = await db.doc(`users/${uid}`).get();
+  const tokens = (u.exists && u.data().fcm) || [];
+  if (!tokens.length) return 0;
+  const r = await admin.messaging().sendEachForMulticast({ tokens, notification: { title: 'Muffin Night', body: MSG[kind] || MSG.move }, webpush: { fcmOptions: { link: APP_URL } } });
+  const bad = [];
+  r.responses.forEach((x, i) => { if (!x.success && /registration-token-not-registered|invalid-argument|invalid-registration/.test(String(x.error && x.error.code))) bad.push(tokens[i]); });
+  if (bad.length) await db.doc(`users/${uid}`).set({ fcm: admin.firestore.FieldValue.arrayRemove(...bad) }, { merge: true });
+  return r.successCount;
+}
+async function partnerOf(uid) {
+  const db = admin.firestore();
+  const u = await db.doc(`users/${uid}`).get();
+  const cid = u.exists && u.data().cid;
+  if (!cid) return null;
+  const c = await db.doc(`couples/${cid}`).get();
+  return ((c.exists && c.data().members) || []).find(x => x !== uid) || null;
+}
+function localNow(tzMin) { const d = new Date(Date.now() - (tzMin || 0) * 60000); return { day: d.toISOString().slice(0, 10), dow: d.getUTCDay(), min: d.getUTCHours() * 60 + d.getUTCMinutes() }; }
+async function tick() {
+  const db = admin.firestore(); const now = Date.now(); let sent = 0;
+  const due = await db.collection('scheduled').where('at', '<=', now).limit(200).get();
+  for (const d of due.docs) { const x = d.data(); try { if (x.to && MSG[x.kind] && now - x.at < 6 * 3600e3) sent += await sendTo(x.to, x.kind); } catch (e) {} await d.ref.delete(); }
+  const us = await db.collection('users').where('notifyOn', '==', true).limit(1000).get();
+  for (const d of us.docs) {
+    const x = d.data(), n = localNow(x.tz), upd = {};
+    const at = typeof x.dqAt === 'number' ? x.dqAt : 20 * 60;
+    if (x.dqOn !== false && n.min >= at && n.min < at + 30 && x.lastDq !== n.day) { try { sent += await sendTo(d.id, 'dq_daily'); } catch (e) {} upd.lastDq = n.day; }
+    if (x.wkOn !== false && n.dow === 0 && n.min >= 19 * 60 && n.min < 19 * 60 + 30 && x.lastWk !== n.day) { try { sent += await sendTo(d.id, 'week_rem'); } catch (e) {} upd.lastWk = n.day; }
+    if (Object.keys(upd).length) await d.ref.set(upd, { merge: true });
+  }
+  return sent;
+}
+
 functions.http('coach', async (req, res) => {
+  if (req.path === '/tick') { try { const n = await tick(); return res.json({ ok: true, sent: n }); } catch (e) { console.error('tick', e && e.message); return res.status(500).json({ error: 'tick' }); } }
+  if (req.path === '/notify') {
+    res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN); res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type'); res.set('Access-Control-Allow-Methods', 'POST');
+    if (req.method === 'OPTIONS') return res.status(204).send('');
+    try {
+      const tok = (req.get('Authorization') || '').replace(/^Bearer /, '');
+      const user = await admin.auth().verifyIdToken(tok);
+      const kind = String((req.body || {}).kind || '');
+      if (!MSG[kind]) return res.status(400).json({ error: 'kind' });
+      const db = admin.firestore(), day = new Date().toISOString().slice(0, 10), ref = db.doc(`notifyUsage/${user.uid}_${day}`);
+      const n = await db.runTransaction(async t => { const s = await t.get(ref); const c = (s.exists ? s.data().n : 0) + 1; t.set(ref, { n: c }, { merge: true }); return c; });
+      if (n > 60) return res.status(429).json({ error: 'limit' });
+      const p = await partnerOf(user.uid);
+      const sent = p ? await sendTo(p, kind) : 0;
+      return res.json({ ok: true, sent });
+    } catch (e) { console.error('notify', e && e.message); return res.status(401).json({ error: 'unauthorized' }); }
+  }
   res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.set('Access-Control-Allow-Methods', 'POST');

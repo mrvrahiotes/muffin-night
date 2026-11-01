@@ -34,9 +34,20 @@ function lost(a,b,p='',out=[]){if(JSON.stringify(a)===JSON.stringify(b))return o
  // something typed on the old version is kept after updating
  await p.evaluate(()=>{const st=JSON.parse(localStorage.getItem('fakefs'));const k3=Object.keys(st).find(k=>k.endsWith('/data/state3'));st[k3.replace('state3','state2')]=st[k3];delete st[k3];localStorage.setItem('fakefs',JSON.stringify(st));const L=JSON.parse(localStorage.getItem('mn_state3'));L.notes=[{id:999,from:'his',to:'her',text:'typed on old version',date:new Date().toISOString()}].concat(L.notes||[]);localStorage.setItem('mn_state',JSON.stringify(L));localStorage.removeItem('mn_state3');localStorage.removeItem('mn_last3')});
  await p.reload();await wait(3500);ok('note typed on old version kept',await p.evaluate(()=>JSON.stringify(S.notes).includes('typed on old version')));
+ // an old version still open somewhere keeps saving to the old location: 5.3+ picks it up
+ await p.evaluate(()=>{const st=JSON.parse(localStorage.getItem('fakefs'));const k3=Object.keys(st).find(k=>k.endsWith('/data/state3'));st[k3.replace('state3','state2')]=st[k3];localStorage.setItem('fakefs',JSON.stringify(st))});
+ await p.evaluate(async()=>{const r=DB.doc('couple/state2');const d=(await r.get()).data();d.prof=d.prof||{};d.prof.his=d.prof.his||{acc:{},brk:{}};d.prof.his.acc=Object.assign({},d.prof.his.acc,{oldver:'Typed on an old copy'});d.wish=[{id:777,from:'his',name:'Old copy wish'}].concat(d.wish||[]);await r.set(d)});
+ await p.reload();await wait(3500);
+ ok('entries saved by an old copy still open are picked up',await p.evaluate(()=>JSON.stringify(S.prof).includes('Typed on an old copy')&&JSON.stringify(S.wish).includes('Old copy wish')));
+ // typing in profile fields saves without tapping Save
+ await p.evaluate(()=>{tabNow='rom';romSub='prof';profWho='his';render()});await wait(300);
+ const fid=await p.evaluate(()=>{const e=document.querySelector('textarea[id^="brk_his_"]');return e&&e.id});
+ if(fid){await p.locator('#'+fid).fill('');await p.locator('#'+fid).type('Sample typed brake',{delay:10});await wait(1500);await p.reload();await wait(3500);}
+ ok('typing in a profile field saves on its own',!!fid&&await p.evaluate(()=>JSON.stringify(S.prof).includes('Sample typed brake')),fid||'no field');
  // a stale phone copy that is much emptier must not delete server data
+ const base3=await snap();
  await p.evaluate(()=>{const L=blank();localStorage.setItem('mn_state3',JSON.stringify(L))});await p.reload();await wait(3500);
- {const L=lost(base2,await snap());ok('emptier phone copy does not delete anything',!L.length,L.slice(0,5).join(', '))}
+ {const L=lost(base3,await snap());ok('emptier phone copy does not delete anything',!L.length,L.slice(0,5).join(', '))}
  // survey guard: a sync carrying an emptied survey keeps the full one
  ok('emptied survey cannot overwrite a full one',await p.evaluate(()=>{const srv=JSON.parse(JSON.stringify(S));const cur=JSON.parse(JSON.stringify(S));cur.survey.her=bSv();const m=guardSv(applyDiff(JSON.parse(JSON.stringify(srv)),srv,cur),srv);return svCount(m.survey.her)>=svCount(srv.survey.her)*0.9}));
  // private dream comes back on a new phone

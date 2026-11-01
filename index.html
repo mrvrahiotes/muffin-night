@@ -61,7 +61,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.6</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.7</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -515,7 +515,7 @@ async function boot(){
     if(readOnly)lastSynced=clone(srv||{});
     if(!readOnly)lastSynced=clone(S);keepLocal();
     for(const p of ["his","her"]){try{const a=await db.doc("couple/answers_"+p).get();if(a.exists){const d=a.data();S.survey[p].n=Object.assign({},S.survey[p].n||{},d.n||{})}}catch(e){}}
-    applyDeck();sharedOn=true;render();if(readOnly)roNotice();else setSave("Saved · shared between you two");
+    applyDeck();sharedOn=true;render();setTimeout(svGuard,2000);if(readOnly)roNotice();else setSave("Saved · shared between you two");
     docRef.onSnapshot(snapH=sn=>{if(!sn.exists)return;const m=sn.metadata||{};if(m.hasPendingWrites)return;if(syncing){pendingSnap=sn;return}
       const srv2=sn.data();if(same(srv2,lastSynced))return;
       const mergedS=fillEA(applyDiff(clone(srv2),lastSynced,S),S);lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();
@@ -789,8 +789,8 @@ function svNew(p){const d=svDis(p);return svPending(p).filter(x=>!d.includes(x.i
 function svLater(p){try{localStorage.setItem('mn_svdis_'+p,JSON.stringify(svPending(p).map(x=>x.id)))}catch(e){}render()}
 function svGo(p){const L=svNew(p);const list=L.length?L:svPending(p);tabNow='survey';svStart(p);if(list.length){svStep=Math.min(...list.map(x=>x.step));if(svStep===SV_TPAGES+3)svMore=true}render();window.scrollTo(0,0)}
 function svNext(d){if(svWho&&svStep===SV_TPAGES+1&&d>0&&!S.survey[svWho].styleSeen){S.survey[svWho].styleSeen=true;save()}if(svWho&&svStep===SV_TPAGES+2&&d>0){const so=soloOf(S.survey[svWho]);if(!so.seen){so.seen=true;save()}}svStep+=d;svOpen=null;render();window.scrollTo(0,0)}
-function svFinish(){SV_NOTES.forEach(([id])=>{const el=document.getElementById('sn_'+id);if(el&&(el.value.trim()||!S.survey[svWho].n[id]))S.survey[svWho].n[id]=el.value.trim()});const sh=document.getElementById('sv_share');S.survey[svWho].shared=!!(sh&&sh.checked);const wl=document.getElementById('sv_wish');S.survey[svWho].wish=!!(wl&&wl.checked);SV_NOTES.forEach(([id])=>{const v=S.survey[svWho].n[id];if(v)ansQueue(svWho,id,v)});ansFlush(svWho);S.survey[svWho].done=true;try{statSurvey(svWho);statThemes(svWho)}catch(e){}svWho=null;save();render();window.scrollTo(0,0)}
-function svRedo(p){S.survey[p].done=false;svStart(p)}
+function svFinish(){SV_NOTES.forEach(([id])=>{const el=document.getElementById('sn_'+id);if(el&&(el.value.trim()||!S.survey[svWho].n[id]))S.survey[svWho].n[id]=el.value.trim()});const sh=document.getElementById('sv_share');S.survey[svWho].shared=!!(sh&&sh.checked);const wl=document.getElementById('sv_wish');S.survey[svWho].wish=!!(wl&&wl.checked);SV_NOTES.forEach(([id])=>{const v=S.survey[svWho].n[id];if(v)ansQueue(svWho,id,v)});ansFlush(svWho);S.survey[svWho].done=true;try{statSurvey(svWho);statThemes(svWho)}catch(e){}setTimeout(svGuard,1500);svWho=null;save();render();window.scrollTo(0,0)}
+let svRedoAsk=null;function svRedo(p){if(svRedoAsk!==p){svRedoAsk=p;render();return}svRedoAsk=null;S.survey[p].done=false;svStart(p)}
 function themeLabel(p,id){const x=(S.survey[p].t||{})[id];return x}
 function vSurvey(){
  const H=S.survey.his,Hr=S.survey.her;
@@ -873,7 +873,7 @@ function vSurvey(){
  <li><b>Not AI.</b> Nothing you enter is sent to an AI.</li>
  <li><b>Anonymous counts, only if you say yes.</b> If you opt in, the app shares counts like how often each card is rated love. Never your writing, names, or anything that points back to you two.</li>
  <li><b>You can erase it.</b> "Delete all our data" on the Us tab wipes everything at once.</li></ul></div>
- <div class="grid2">${["her","his"].map(p=>`<div class="card"><p class="lbl">${p==="her"?"Her":"Him"}</p><p class="val">${st(p)}</p><button class="${S.survey[p].done?'':'primary'} full" style="margin-top:8px" onclick="${S.survey[p].done?`svRedo('${p}')`:`svStart('${p}')`}">${S.survey[p].done?'Retake':started(p)?'Continue':'Start'}</button></div>`).join('')}</div>
+ <div class="grid2">${["her","his"].map(p=>`<div class="card"><p class="lbl">${p==="her"?"Her":"Him"}</p><p class="val">${st(p)}</p><button class="${S.survey[p].done?'':'primary'} full" style="margin-top:8px" onclick="${S.survey[p].done?`svRedo('${p}')`:`svStart('${p}')`}">${S.survey[p].done?(svRedoAsk===p?'Tap again to review: your answers stay filled in':'Review or change answers'):started(p)?'Continue':'Start'}</button></div>`).join('')}</div>
  ${["her","his"].map(p=>{const o=S.survey[p];if(!o.done)return'';const nm=p==="her"?"Her":"His",ot=p==="her"?"him":"her";
    return `<div class="card"><p class="lbl">${nm} sharing</p><p class="note" style="margin:4px 0 8px">Only ${p==="her"?"she":"he"} should change these.</p><div class="grid2" style="margin-bottom:8px"><button onclick="S.survey['${p}'].wish=${!(o.wish)};save();render()">${o.wish?'Hide "What I\'m into"':'Share "What I\'m into"'}</button><span class="note" style="align-self:center">${o.wish?'Shared in Our story.':'Private.'}</span></div><div class="grid2"><button onclick="svShare('${p}',${!o.shared})">${o.shared?'Stop sharing full answers':'Share full answers'}</button>${o.shared?`<button onclick="svView='${p}';render();window.scrollTo(0,0)">View ${p==="her"?"her":"his"} answers</button>`:`<span class="note" style="align-self:center">Full answers are private.</span>`}</div></div>`}).join('')}
  ${me()&&S.survey[me()]&&(S.survey[me()].done||started(me()))?`<button class="full" onclick="svView='${me()}';render();window.scrollTo(0,0)">See my answers</button>`:''}
@@ -1030,6 +1030,17 @@ let gSub="how";
 async function exportData(){try{const dl=await MN.use("downloads");if(!dl){setSave("Downloads aren't available here.");return}
  await dl.save({filename:"muffin-night-backup-"+today()+".json",data:JSON.stringify(S,null,1)});try{localStorage.setItem("mn_lastbk",String(Date.now()))}catch(e){};setSave("Backup saved");render()}catch(e){setSave("Backup not saved.")}}
 function mnToast(t,bad){let e=document.getElementById('mntoast');if(!e){e=document.createElement('div');e.id='mntoast';e.style.cssText='position:fixed;left:16px;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:95;padding:14px 16px;border-radius:12px;font:15px/1.4 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25)';document.body.appendChild(e)}e.style.background=bad?'#a3302a':'#2f6b46';e.style.color='#fff';e.textContent=t;e.hidden=false;clearTimeout(e._t);e._t=setTimeout(()=>{e.hidden=true},7000)}
+
+/* ---------- survey safety net: automatic snapshots ---------- */
+let SVB=null,svLost=null;
+function svCount(o){return o?Object.keys(o.a||{}).length+Object.keys(o.t||{}).length+Object.values(o.n||{}).filter(x=>String(x||"").trim()).length:0}
+async function svGuard(){try{if(!CK||typeof DB==="undefined"||!DB)return;const d=await DB.doc("couple/svbak").get();SVB=d.exists?(d.data()||{}):{};const upd={};let ch=false;
+ ["her","his"].forEach(p=>{const cur=S.survey&&S.survey[p],n=svCount(cur),b=SVB[p];
+  if(b&&b.n>=20&&n<b.n*0.6){svLost=svLost||{};svLost[p]=b.n-n}
+  if(n>=20&&(!b||n>=b.n||Date.now()-(b.ts||0)>7*864e5&&n>=b.n*0.9)){upd[p]={ts:Date.now(),n,sv:JSON.parse(JSON.stringify(cur))};ch=true}});
+ if(ch){Object.assign(SVB,upd);await DB.doc("couple/svbak").set(SVB)}if(svLost)render()}catch(e){}}
+function svRestoreSnap(){if(!SVB)return;let tot=0;Object.keys(svLost||{}).forEach(p=>{if(SVB[p]){const [c,n]=svMerge(S.survey[p],SVB[p].sv);S.survey[p]=c;tot+=n}});svLost=null;norm();applyDeck();save();render();mnToast(`Restored ${tot} survey answers. Nothing newer was changed.`)}
+function svLostCard(m){if(!svLost)return "";const ps=Object.keys(svLost);return `<div class="card" style="border-color:var(--accent)"><p class="lbl">Survey answers missing</p><p class="note" style="margin-top:4px">${ps.map(p=>(p===m?"Your":p==="her"?"Her":"His")+` survey is missing about ${svLost[p]} answers`).join(", ")} compared with the copy saved automatically. Bring them back? Anything answered since stays as it is.</p><div class="grid2" style="margin-top:8px"><button onclick="svLost=null;render()">Not now</button><button class="primary" onclick="svRestoreSnap()">Restore</button></div></div>`}
 function svMerge(cur,old){cur=cur||bSv();const o=renameDeep(JSON.parse(JSON.stringify(old||{})));let n=0;
  ["a","t","g"].forEach(k=>{const A=cur[k]=cur[k]||{};Object.keys(o[k]||{}).forEach(v=>{if(A[v]===undefined){A[v]=o[k][v];n++}})});
  const N=cur.n=cur.n||{};Object.keys(o.n||{}).forEach(k=>{if(!String(N[k]||"").trim()&&String(o.n[k]||"").trim()){N[k]=o.n[k];n++}});
@@ -2083,7 +2094,7 @@ function schedPush(side,at,kind){try{const uid=(S.roles||{})[side];if(!uid||!FB_
 
 /* ---------- Today: three cards, the rest folded ---------- */
 let todayMore=false;
-function todayStack(m){const L=[splitCard(m),brkCard(m),dealCards(m),thInvCard(m),jCard(m),surpToday(m),planToday(m),dqCard(m),jOpen('repair')?fixCard(m):'',jOpen('week')?wkCard(m):'',jOpen('plan')?touchToday(m):'',pulseCard(m),nfAsk(m),resetToday(m),apartToday(m),recToday(m),nfCard(m),exploreCard(m),demoCard(m)].filter(x=>x&&x.trim());
+function todayStack(m){const L=[svLostCard(m),splitCard(m),brkCard(m),dealCards(m),thInvCard(m),jCard(m),surpToday(m),planToday(m),dqCard(m),jOpen('repair')?fixCard(m):'',jOpen('week')?wkCard(m):'',jOpen('plan')?touchToday(m):'',pulseCard(m),nfAsk(m),resetToday(m),apartToday(m),recToday(m),nfCard(m),exploreCard(m),demoCard(m)].filter(x=>x&&x.trim());
  if(L.length<=3)return L.join('');const rest=L.slice(3);
  return L.slice(0,3).join('')+`<button class="full" style="display:flex;justify-content:space-between;align-items:center" onclick="todayMore=!todayMore;render()"><span>More for today (${rest.length})</span><span style="color:var(--accent)">${todayMore?'▾':'›'}</span></button>`+(todayMore?rest.join(''):'')}
 

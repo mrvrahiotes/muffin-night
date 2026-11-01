@@ -61,7 +61,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 5.1</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 5.2</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -412,7 +412,8 @@ function blank(){return{ratings:{},added:{},removed:{},current:null,reports:[],s
 const RENAME={"Partner aside, what celebrity would you jump in the sack with?":"Which celebrity is your secret crush, and what is it about them that gets you?","Would it be hot for her to put on her heaviest makeup and give you oral?":"Him: Would it turn you on if I did my makeup heavy and dramatic, just to go down on you?","Finish this: I turn myself on when…":"Finish this: I feel sexiest when…","Finish this: I turn myself off when…":"Finish this: I feel least sexy when…","Tire Talk: tell me something you like, love, want, or hate in bed that you've been afraid to say.":"Dirty talk: tell me something you like, love, want, or hate in bed that you've been afraid to say.","Steal a kiss, makeout anywhere, anytime":"Steal a kiss, make out anywhere, anytime","Remote control vibrator":"Remote-control vibrator","Clean shaven":"Clean-shaven","How do you feel about remote control panties? Where would you wear them on a date?":"How do you feel about remote-control panties? Where would you wear them on a date?"};
 function renameDeep(x){if(Array.isArray(x)){for(let i=0;i<x.length;i++){if(typeof x[i]==="string"&&RENAME[x[i]])x[i]=RENAME[x[i]];else if(x[i]&&typeof x[i]==="object")renameDeep(x[i])}}else if(x&&typeof x==="object"){for(const k of Object.keys(x)){let v=x[k];if(typeof v==="string"&&RENAME[v])x[k]=v=RENAME[v];else if(v&&typeof v==="object")renameDeep(v);if(RENAME[k]){const nk=RENAME[k];if(!(nk in x))x[nk]=x[k];delete x[k]}}}return x}
 function norm(){renameDeep(S);if(!S.survey)S.survey={his:bSv(),her:bSv()};["his","her"].forEach(p=>{if(!S.survey[p])S.survey[p]=bSv();const o=S.survey[p];if(!o.a||typeof o.a!=="object")o.a={};if(!o.n||typeof o.n!=="object")o.n={}});if(typeof applyTracks==="function")applyTracks()}
-function setSave(t){document.getElementById('savestate').textContent=t;const b=document.getElementById('offline');if(!b)return;if(/phone only|Couldn't sync/.test(t))b.hidden=false;else if(/shared between you two/i.test(t))b.hidden=true}
+function setSave(t){document.getElementById('savestate').textContent=t;const b=document.getElementById('offline');if(!b)return;if(/phone only/.test(t)||(/Couldn't sync/.test(t)&&syncFails>=3))b.hidden=false;else if(/shared between you two/i.test(t))b.hidden=true}
+window.addEventListener("online",()=>{if(syncFails&&!syncing)sync()});
 let readOnly=false,DB=null,ansStat={},ansQ={},ansBusy={},lastWrite=0,sharedOn=false,lastSynced=null,syncing=false,again=false;
 const clone=x=>JSON.parse(JSON.stringify(x===undefined?null:x));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -518,13 +519,13 @@ async function boot(){
     if(readOnly)lastSynced=clone(srv||{});
     if(!readOnly)lastSynced=clone(S);keepLocal();
     for(const p of ["his","her"]){try{const a=await db.doc("couple/answers_"+p).get();if(a.exists){const d=a.data();S.survey[p].n=Object.assign({},S.survey[p].n||{},d.n||{})}}catch(e){}}
-    applyDeck();sharedOn=true;render();setTimeout(svGuard,2000);setTimeout(dayBackup,4000);setTimeout(pdSync,2500);setInterval(dayBackup,30*60*1000);checkUpdate();if(readOnly)roNotice();else setSave("Saved · shared between you two");
+    applyDeck();sharedOn=true;render();setTimeout(svGuard,2000);setTimeout(dayBackup,4000);setTimeout(pdSync,2500);setInterval(dayBackup,10*60*1000);checkUpdate();if(readOnly)roNotice();else setSave("✓ Saved · shared between you two");
     docRef.onSnapshot(snapH=sn=>{if(!sn.exists)return;const m=sn.metadata||{};if(m.hasPendingWrites)return;if(syncing){pendingSnap=sn;return}
       const srv2=sn.data();if(same(srv2,lastSynced))return;
       const mergedS=guardSv(fillEA(applyDiff(clone(srv2),lastSynced,S),S),srv2);lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();
       if(!same(mergedS,srv2)&&!readOnly)save();
       const a=document.activeElement;if(a&&/TEXTAREA|INPUT|SELECT/.test(a.tagName))return;render()},()=>{});
-  }catch(e){setSave("Saved on this phone only")}
+  }catch(e){errReport("boot",e);setSave("Saved on this phone only")}
 }
 function save(){
   if(!localReady)return;keepLocal();if(readOnly){roNotice();return}
@@ -538,8 +539,8 @@ async function sync(){if(readOnly){roNotice();return}if(syncing){again=true;retu
   try{await lockDoc();const cur=clone(S);const snap=await docRef.get();const srv=snap.exists?snap.data():{};
     const merged=guardSv(fillEA(applyDiff(clone(srv),lastSynced||{},cur),cur),srv);lastWrite=Date.now();await docRef.set(clone(merged));
     S=Object.assign(blank(),applyDiff(clone(merged),cur,S));norm();lastSynced=clone(merged);keepLocal();applyDeck();
-    setSave("Saved · shared between you two")}
-  catch(e){setSave("Couldn't sync. Saved on this phone; it will retry on your next change.")}
+    syncFails=0;lastOkSave=Date.now();setSave("✓ Saved · shared between you two")}
+  catch(e){syncFails++;errReport("sync",e);setSave("Couldn't sync yet. Saved on this phone; retrying…");clearTimeout(syncRetryT);syncRetryT=setTimeout(()=>{if(!syncing)sync()},Math.min(60000,5000*syncFails))}
   syncing=false;if(again){again=false;sync()}else if(pendingSnap&&snapH){const x=pendingSnap;pendingSnap=null;try{snapH(x)}catch(e){}}}
 function firstTab(){}
 function pendingPatch(){if(!lastSynced)return null;const keys=[...new Set([...Object.keys(lastSynced),...Object.keys(S)])].filter(k=>!same(lastSynced[k],S[k]));if(!keys.length)return null;const l={},c={};keys.forEach(k=>{l[k]=lastSynced[k];c[k]=S[k]});return {l,c,from:me()||"her",at:Date.now()}}
@@ -1056,10 +1057,10 @@ function svRestoreSnap(){if(!SVB)return;let tot=0;Object.keys(svLost||{}).forEac
 function svLostCard(m){if(!svLost)return "";const ps=Object.keys(svLost);return `<div class="card" style="border-color:var(--accent)"><p class="lbl">Survey answers missing</p><p class="note" style="margin-top:4px">${ps.map(p=>(p===m?"Your":p==="her"?"Her":"His")+` survey is missing about ${svLost[p]} answers`).join(", ")} compared with the copy saved automatically. Bring them back? Anything answered since stays as it is.</p><div class="grid2" style="margin-top:8px"><button onclick="svLost=null;render()">Not now</button><button class="primary" onclick="svRestoreSnap()">Restore</button></div></div>`}
 
 /* ---------- daily automatic backups of everything ---------- */
-async function dayBackup(){try{if(!CK||!DB||readOnly)return;const k="couple/bak_"+today();const g=await DB.doc(k).get();const cur=JSON.stringify(S).length;
- if(g.exists){const d=g.data()||{};if((d.n||0)>=cur*0.9&&Date.now()-(d.ts||0)<6*36e5)return}
- if(g.exists&&(g.data()||{}).n>cur*1.5)return;
- await DB.doc(k).set({ts:Date.now(),n:cur,s:JSON.parse(JSON.stringify(S))});
+let bkLastH=null;async function dayBackup(){try{if(!CK||!DB||readOnly)return;const k="couple/bak_"+today();const js=JSON.stringify(S),cur=js.length;let h=0;for(let i=0;i<js.length;i++)h=(h*31+js.charCodeAt(i))|0;
+ if(h===bkLastH)return;const g=await DB.doc(k).get();
+ if(g.exists){const d=g.data()||{};if(d.h===h){bkLastH=h;return}if((d.n||0)>cur*1.5)return}
+ await DB.doc(k).set({ts:Date.now(),n:cur,h,s:JSON.parse(js)});bkLastH=h;
  const ix=await DB.doc("couple/bakindex").get();let L=(ix.exists&&ix.data().d)||[];if(!L.includes(today()))L.push(today());L.sort();while(L.length>10){const old=L.shift();try{await DB.doc("couple/bak_"+old).delete()}catch(e){}}await DB.doc("couple/bakindex").set({d:L})}catch(e){}}
 let bkBusy=false;
 async function restoreMissing(){if(bkBusy||!DB)return;bkBusy=true;render();let tot=0;try{const before=JSON.stringify(S).length;const ix=await DB.doc("couple/bakindex").get();const L=((ix.exists&&ix.data().d)||[]).slice().reverse();
@@ -1067,9 +1068,17 @@ async function restoreMissing(){if(bkBusy||!DB)return;bkBusy=true;render();let t
  norm();applyDeck();save();tot=JSON.stringify(S).length-before}catch(e){}bkBusy=false;render();rtoast(tot>20?"Brought back what was missing. Nothing newer was changed.":"Nothing was missing.")}
 function bkAutoCard(){return `<div class="card"><p class="lbl">Automatic backups</p><p class="note" style="margin-top:4px">Everything you two enter is backed up automatically each day, locked with your passphrase, for the last 10 days.</p><button class="full" style="margin-top:8px" onclick="restoreMissing()">${bkBusy?'Checking…':'Bring back anything missing'}</button><p class="note" style="margin-top:6px">Only fills in what's gone. Nothing you've changed since is touched.</p></div>`}
 /* ---------- auto update ---------- */
-const APP_V="5.1";let updBusy=false;
+const APP_V="5.2";let updBusy=false;
 async function checkUpdate(){if(updBusy||location.protocol==="file:")return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();if(j&&j.v&&j.v!==APP_V&&parseFloat(j.v)>parseFloat(APP_V)){updBusy=true;try{clearTimeout(saveTimer);await sync()}catch(e){}const b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:99;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px';b.textContent='Updating Muffin Night…';document.body.appendChild(b);setTimeout(()=>location.reload(),600)}}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});setInterval(checkUpdate,10*60*1000);
+
+/* ---------- error reports (no content) + save retry ---------- */
+let errN=0;const errSeen={};
+function errReport(where,e){try{if(errN>=15||typeof fdb==="undefined"||!FB_USER)return;let msg=String(e&&(e.message||e.code)||e||"").replace(/"[^"]*"|'[^']*'|`[^`]*`/g,'"…"').replace(/\s+/g," ").slice(0,140);const key=where+msg;if(errSeen[key])return;errSeen[key]=1;errN++;
+ fdb.doc("usage/"+anonId()).set({errs:firebase.firestore.FieldValue.arrayUnion([APP_V,where,msg,new Date().toISOString().slice(0,16),(navigator.userAgent.match(/iPhone|Android|Mac|Windows/)||["?"])[0]].join(" | ")),errLast:Date.now()},{merge:true}).catch(()=>{})}catch(x){}}
+window.addEventListener("error",ev=>errReport("js "+String(ev.filename||"").split("/").pop()+":"+(ev.lineno||""),ev.error||ev.message));
+window.addEventListener("unhandledrejection",ev=>errReport("promise",ev.reason));
+let syncFails=0,syncRetryT=null,lastOkSave=0;
 function svMerge(cur,old){cur=cur||bSv();const o=renameDeep(JSON.parse(JSON.stringify(old||{})));let n=0;
  ["a","t","g"].forEach(k=>{const A=cur[k]=cur[k]||{};Object.keys(o[k]||{}).forEach(v=>{if(A[v]===undefined){A[v]=o[k][v];n++}})});
  const N=cur.n=cur.n||{};Object.keys(o.n||{}).forEach(k=>{if(!String(N[k]||"").trim()&&String(o.n[k]||"").trim()){N[k]=o.n[k];n++}});
@@ -1246,7 +1255,9 @@ function statThemes(p){if(!statsOn()||me()!==p||!S.survey[p]||!S.survey[p].done)
 /* owner: tester report */
 let UR=null,urShow=false;
 async function urLoad(){try{const us=(await fdb.collection("usage").get()).docs.map(d=>d.data());const th=(await fdb.collection("statthemes").get()).docs.map(d=>Object.assign({id:d.id},d.data()));const r=await fdb.doc("stats/ratings").get();const pu=[];for(let n=1;n<=6;n++){const d=await fdb.doc("stats/pulse_m"+n).get();if(d.exists)pu.push(Object.assign({},d.data(),{mo:n}))}UR={us,th,rt:r.exists?r.data():{},pu};render()}catch(e){UR={err:String(e&&e.message||e)};render()}}
-function urCard(){if(!IS_OWNER)return "";let h=`<div class="card" style="border-color:var(--accent)"><div class="row"><p class="lbl grow">Tester report · per couple, anonymous</p><button style="min-height:30px;padding:2px 10px;font-size:13px" onclick="urShow=!urShow;if(urShow){UR=null;urLoad()}render()">${urShow?'Hide':'Show'}</button></div>`;
+function urCard(){return urCard0()+errCard()}
+function errCard(){if(!IS_OWNER||!urShow||!UR||!UR.us)return "";const L=[];UR.us.forEach((u,i)=>(u.errs||[]).forEach(e=>L.push("Couple "+(i+1)+" · "+e)));L.sort((a,b)=>(b.split(" | ")[3]||"").localeCompare(a.split(" | ")[3]||""));return `<div class="card"><p class="lbl">Error reports · ${L.length}</p>${L.length?L.slice(0,40).map(e=>`<p class="note" style="margin-top:4px;word-break:break-word">${esc(e)}</p>`).join(""):`<p class="note" style="margin-top:4px">No errors reported. 🎉</p>`}</div>`}
+function urCard0(){if(!IS_OWNER)return "";let h=`<div class="card" style="border-color:var(--accent)"><div class="row"><p class="lbl grow">Tester report · per couple, anonymous</p><button style="min-height:30px;padding:2px 10px;font-size:13px" onclick="urShow=!urShow;if(urShow){UR=null;urLoad()}render()">${urShow?'Hide':'Show'}</button></div>`;
  if(!urShow)return h+`<p class="note" style="margin-top:4px">Which features couples find, use, and rate, plus what each age group is into. No names.</p></div>`;
  if(!UR)return h+`<p class="note" style="margin-top:6px">Loading…</p></div>`;if(UR.err)return h+`<p class="note" style="margin-top:6px">Couldn't load: ${esc(UR.err)}. Check that the latest Firestore rules are published.</p></div>`;
  const us=UR.us,N=us.length;if(!N)return h+`<p class="note" style="margin-top:6px">No couples have shared usage yet. It starts once someone says yes to anonymous counts.</p></div>`;
@@ -2443,7 +2454,7 @@ const DSUG=[
  ["Family",[["bday-her","Her birthday"],["bday-his","His birthday"],["half-her","Her half birthday (a small surprise)"],["half-his","His half birthday (a small surprise)"],["kid","A kid's birthday",1],["expect","The day we found out we were expecting",1],["gotcha","A pet's birthday or gotcha day",1],["inlaw","A parent's birthday",1]]],
  ["Holidays for the two of you",[["val","Valentine's Day",0,"02-14"],["mom","Mother's Day",0,"rule:5-2-0"],["dad","Father's Day",0,"rule:6-3-0"],["sweet","Sweetest Day",0,"rule:10-3-6"],["nye","New Year's Eve",0,"12-31"]]]];
 let dSug=null;
-function ruleDate(r,y){const [mo,nth,wd]=r.slice(5).split("-").map(Number);const d=new Date(y,mo-1,1);let c=0;while(true){if(d.getDay()===wd){c++;if(c===nth)return d}d.setDate(d.getDate()+1)}}
+function ruleDate(r,y){const [mo,nth,wd]=String(r||"").slice(5).split("-").map(Number);if(!(mo>=1&&mo<=12&&nth>=1&&nth<=5&&wd>=0&&wd<=6))return null;const d=new Date(y,mo-1,1);let c=0;for(let i=0;i<400;i++){if(d.getDay()===wd){c++;if(c===nth)return d}d.setDate(d.getDate()+1)}}
 function occDate(x){const n=new Date();n.setHours(0,0,0,0);if(x.rule){let d=ruleDate(x.rule,n.getFullYear());if(d<n)d=ruleDate(x.rule,n.getFullYear()+1);return d}const r=nextOcc(x.md);if(r==null)return null;const d=new Date(n);d.setDate(d.getDate()+r);return d}
 function nextOccX(x){if(!x)return null;const d=occDate(x);if(!d)return null;const n=new Date();n.setHours(0,0,0,0);return Math.round((d-n)/864e5)}
 function sugAdd(k){let it=null;DSUG.forEach(g=>g[1].forEach(x=>{if(x[0]===k)it=x}));if(!it)return;

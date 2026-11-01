@@ -1,0 +1,3 @@
+#!/bin/sh
+# Block any push whose data-safety tests fail
+node tests/run.js || { echo "Data-safety tests failed: push blocked."; exit 1; }

@@ -1,0 +1,47 @@
+1 merge-both-tips: "Relive our first date, erotic ending" + "First date redo, ends how she really wanted"
+2 merge-both-tips -> "Marathon night": "All-night, longevity mission" + "Marathon night"
+3 merge -> "She's in charge tonight": "She leads the way" + "Role swap, she's in charge tonight"
+4 merge "Total control night" + "Obedience hour"; keep "Take control"
+5 merge no store names -> "Shop for an outfit together": Etsy + Temu
+6 keep both: "He picks her date night outfit", "Choose my outfit"
+7 keep both: "Costume role-play", "Fantasy outfit for the role"
+8 keep both; write tip for "Video warm-up"
+9 merge -> "Teach me your solo routine": "Show and tell" + "Teach me your solo routine"
+10 keep all three clothes-on cards
+11 keep both: "Toys of her choice", "Her favorite toy or wand"
+12 keep both; rename his-finish "Her hands and mouth together" -> "Hands and mouth to the finish"
+13 split "Edged three times, then released" -> "Edge her three times" (her) + "Edge him three times" (his)
+14 keep both: "Simon says", "Three commands"
+15 merge -> "Make me say please": + "Permission required"
+16 remove "Hands off, only react"; keep "No hands for him", "She's not allowed to move"
+17 merge "Edge her twice" into "Cliffhanger, edge then stop"; keep "Such a tease"
+18 keep both blindfold cards
+19 keep both restraint cards
+20 keep both lap dance cards
+21 remove "Quiet game, others in the room"; keep "Silent night"
+22 keep both: "Hands only", "Finger play"
+23 merge "69" + "Side-by-side 69" -> "69"; keep "Finish during 69"
+24 keep both: "Kiss every inch", "Lick everywhere but her usual spots"
+25 food: keep Whipped cream, Chocolate sauce trail, Wine drip and lick, Edible body paint; remove Food licking, Honey drizzle, Candy or lollipop licking (sugar note into kept tips)
+26 keep both naked cards
+27 keep both bath cards
+28 merge -> "Strangers in the night": + "Get ready apart, meet at the bar"
+29 keep both lingerie cards
+30 merge "High heels" + "Boots and heels" -> "Heels or boots stay on"; keep "Thigh-high boots"
+31 keep all four one-item cards
+32 keep all three nothing-under cards
+33 keep both photo cards
+34 keep both: "Phone or video sex", "Solo while apart, on video"
+35 merge "Vibrator during sex" + "Vibrator while she rides him" -> "Vibrator during sex"; keep "Couples vibrator"
+36 remove play "Air-pulse toy for her"; keep her-finish "Air-pulse toy, he holds it" + add finish-fastest note
+37 keep all three grinding cards
+38 keep all three talking cards
+39 keep both spanking cards
+40 merge "Titty fuck" (play) + "Between her breasts" (his finish) -> keep "Between her breasts" in His finish, with the full tip
+41 keep all three glasses/face cards
+42 keep both: "Swallow", "In her mouth, her pace"
+43 keep both: "By his mouth", "Riding his face"
+44 merge "Finish line, tell her exactly how" + "His choice of how" -> "His choice, said out loud"
+45 keep both standing positions
+46 keep both from-behind positions
+47 merge "Om" into "Lotus" (breathing in tip); keep "Rocking horse"

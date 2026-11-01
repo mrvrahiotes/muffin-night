@@ -61,7 +61,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.0</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.1</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -2264,6 +2264,29 @@ function progHTML(){
   <label class="note" for="tname" style="display:block;margin-top:6px">What is it?</label><input id="tname" placeholder="Restraints, toys, lights on…">
   <label class="note" for="tsteps" style="display:block;margin-top:6px">Steps, one per line</label><textarea id="tsteps" style="min-height:120px" placeholder="Silk tie on wrists, loosely&#10;Soft cuffs for a few minutes&#10;Cuffs for the whole night"></textarea>
   <div class="grid2" style="margin-top:8px"><button onclick="tAdd=false;render()">Cancel</button><button class="primary" onclick="addTrack()">Add track</button></div></div>`:`<button class="full" style="margin-top:10px" onclick="tAdd=true;render()">Start a new track</button>`}</div>`}
+
+/* ---------- explore what we're into ---------- */
+let exQ="",exT="all",exS="open",exW="either";
+const EX_LBL={yes:["Into it","var(--good)"],try:["Curious","var(--meh)"],slow:["Exploring slowly","var(--meh)"],no:["No go","var(--bad)"]};
+function exVis(p,v,isT){const o=S.survey[p];if(!o)return null;const a=isT?(o.t||{})[v]:sv(p,v);if(!a)return null;if(p===me())return a;if(a==="no")return o.shared?"no":null;return o.done&&(o.wish!==false||o.shared)?a:null}
+function exPass(h,m2){const O=["yes","try","slow"];const pick=exW==="her"?[h]:exW==="his"?[m2]:[h,m2];
+ if(exS==="both")return h==="yes"&&m2==="yes";if(exS==="open")return O.includes(h)&&O.includes(m2);if(exS==="all")return !!(h||m2);return pick.includes(exS)}
+function exploreHTML(){const m=me();if(!m)return "";const TH=allThemes().filter(t=>!t.gate||gateOpen(t.gate));const q=exQ.trim().toLowerCase();
+ let rows=[];
+ if(exT==="all"){TH.forEach(t=>{if(q&&!(t.q+" "+t.d).toLowerCase().includes(q))return;rows.push({n:t.q,t:true,h:exVis("her",t.id,true),m2:exVis("his",t.id,true)})});
+  if(q){const seen=new Set();SV_CATS.flatMap(k=>C(k).i).forEach(v=>{if(seen.has(v)||!v.toLowerCase().includes(q)||gHide(v))return;seen.add(v);rows.push({n:v,h:exVis("her",v),m2:exVis("his",v)})})}}
+ else{const t=TH.find(x=>x.id===exT);if(t){rows.push({n:t.q,t:true,h:exVis("her",t.id,true),m2:exVis("his",t.id,true)});t.c.forEach(v=>{if(gHide(v))return;if(q&&!v.toLowerCase().includes(q))return;rows.push({n:v,h:exVis("her",v),m2:exVis("his",v)})})}}
+ rows=rows.filter(r=>exPass(r.h,r.m2));
+ const chip=(cur,val,set,label)=>`<button style="min-height:30px;padding:2px 10px;font-size:12px;border-radius:999px" class="${cur===val?'primary':''}" onclick="${set}='${val}';render()">${label}</button>`;
+ const tag=a=>a?`<span style="color:${EX_LBL[a][1]};font-weight:600">${EX_LBL[a][0]}</span>`:'<span class="note">—</span>';
+ const o2=m==="her"?"his":"her",shared=S.survey[o2]&&S.survey[o2].shared;
+ return `<div class="card"><h2>Explore what you're into</h2><p class="note" style="margin:4px 0 8px">Search by topic or idea, and see where you two line up. ${shared?'':`${o2==="her"?"Her":"His"} "no go" answers show only if ${o2==="her"?"she shares her":"he shares his"} full answers.`}</p>
+ <input id="exq" placeholder="Search, like massage, shower, toys…" value="${esc(exQ)}" oninput="exQ=this.value;clearTimeout(window.__ext);window.__ext=setTimeout(()=>{render();const e=document.getElementById('exq');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}},350)">
+ <p class="lbl" style="margin:10px 0 4px">Show</p><div style="display:flex;flex-wrap:wrap;gap:6px">${chip(exS,"both","exS","Both into it")}${chip(exS,"open","exS","Both open to it")}${chip(exS,"yes","exS","Into it")}${chip(exS,"try","exS","Curious")}${chip(exS,"slow","exS","Exploring slowly")}${chip(exS,"no","exS","No go")}${chip(exS,"all","exS","Everything")}</div>
+ ${["yes","try","slow","no"].includes(exS)?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${chip(exW,"either","exW","Either of us")}${chip(exW,"her","exW","Her")}${chip(exW,"his","exW","Him")}</div>`:''}
+ <p class="lbl" style="margin:10px 0 4px">Topic</p><select onchange="exT=this.value;render()"><option value="all" ${exT==="all"?'selected':''}>All topics</option>${TH.map(t=>`<option value="${t.id}" ${exT===t.id?'selected':''}>${esc(t.q)}</option>`).join('')}</select>
+ <p class="note" style="margin-top:10px">${rows.length} match${rows.length===1?'':'es'}</p>
+ ${rows.slice(0,80).map(r=>`<div style="border-top:1px solid var(--line);padding:8px 0;display:flex;gap:8px;align-items:flex-start"><span class="grow" style="${r.t?'font-weight:600':''}">${esc(r.n)}${r.t&&exT==="all"?'':''}</span><span style="font-size:12px;text-align:right;min-width:120px">Her: ${tag(r.h)}<br>Him: ${tag(r.m2)}</span></div>`).join('')}${rows.length>80?`<p class="note">Showing the first 80. Narrow it with a topic or search.</p>`:''}</div>`}
 function wishHTML(){
  const one=p=>{const o=S.survey[p],nm=p==="her"?"Her":"His";
   const rated=Object.entries(S.ratings).filter(([v,r])=>r[p]==="love").map(([v])=>v);
@@ -2281,7 +2304,7 @@ function wishHTML(){
    if(o.n.watch)body+=`<p class="note" style="margin-top:6px"><b style="color:var(--fg)">Likes to watch:</b> ${esc(o.n.watch)}</p>`}
   if(!body)body=`<p class="note">${o.done?(o.wish?'Nothing marked yet.':'This summary is private. '+(p==="her"?'She':'He')+' can share it from the Survey tab.'):'Shows up after '+(p==="her"?"she":"he")+' finishes the survey.'}</p>`;
   return `<div class="card"><h2>What ${p==="her"?"she":"he"}'s into</h2><p class="note" style="margin:4px 0 2px">From ${p==="her"?"her":"his"} survey: topics ${p==="her"?"she":"he"}'s into or curious about. Pick one and surprise ${p==="her"?"her":"him"}.</p>${body}</div>`};
- return one("her")+one("his")}
+ return exploreHTML()+one("her")+one("his")}
 let delAsk=false,delHTML='',usStar=false;
 async function wipe(){S=blank();delAsk=false;applyDeck();hand=[];mode="";try{localStorage.removeItem('mn_state');localStorage.removeItem('mn_last')}catch(e){}
  if(docRef){try{await docRef.delete();try{const db=await MN.use("db"),user=await MN.use("user");const id=user&&await user.id();if(db&&id)await db.doc("data/users/"+id+"/game/state").delete()}catch(e){}setSave("Everything deleted")}catch(e){setSave("Couldn't delete from your account. Try again.")}}else setSave("Everything deleted");tabNow="survey";render()}

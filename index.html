@@ -506,7 +506,7 @@ async function boot(){
     const KEY=await passGate(db);
     if(!KEY){DB=db;docRef=null;if(IS_OWNER){fbShow=true;fbLoad()}setSave("Owner view: feedback only");render();return}
     CK=KEY;db=encDB(db);DB=db;docRef=db.doc("couple/state3");var migr=false;if(IS_OWNER){fbLoad();const fb=document.getElementById("fbbtn");if(fb)fb.hidden=true}
-    const snap=await docRef.get();let srv=snap.exists?snap.data():null;
+    const snap=await docRef.get();let srv=snap.exists?snap.data():null;const srv3=srv?clone(srv):{};
     if(!srv){try{const o=await db.doc("couple/state2").get();if(o.exists){srv=o.data();last=null;migr=true}}catch(e){}}
     if(!srv){try{const o=await db.doc("couple/state").get();if(o.exists)srv=o.data()}catch(e){}}
     if(!srv&&user){const id=await user.id();if(id){try{const old=await db.doc("data/users/"+id+"/game/state").get();if(old.exists)srv=old.data()}catch(e){}}}
@@ -521,7 +521,7 @@ async function boot(){
     if(!migr){try{const o2=await db.doc("couple/state2").get();if(o2.exists){const d2=o2.data(),h2=hsh(d2);if(d2&&h2!==merged.s2h){fillMissing(merged,d2);merged.s2h=h2;migr=true}}}catch(e){}}
     try{const lo=localStorage.getItem('mn_state');if(lo&&localStorage.getItem('mn_state3')){const hl=hsh(lo);if(String(hl)!==localStorage.getItem('mn_s1h')){fillMissing(merged,JSON.parse(lo));localStorage.setItem('mn_s1h',String(hl));migr=true}}}catch(e){}
     merged=guardSv(merged,srv);if(srv)guardAll(merged,srv,"opening (vs server)");if(local&&srv)guardAll(merged,local,"opening (vs this phone)");S=Object.assign(blank(),merged);norm();dwatch("opening");
-    if(!readOnly&&(migr||!srv||!same(merged,srv))){lastWrite=Date.now();const want=clone(S),base=clone(srv||{});if(docRef.tx){await docRef.tx(async now=>{const m=guardAll(fillEA(applyDiff(clone(now||{}),base,want),want),now||{},"opening (save)");m.rev=((now&&now.rev)||0)+1;S=Object.assign(blank(),m);norm();return clone(S)})}else await docRef.set(clone(S))}
+    if(!readOnly&&(migr||!srv||!same(merged,srv))){lastWrite=Date.now();const want=clone(S),base=srv3;if(docRef.tx){await docRef.tx(async now=>{const m=guardAll(fillEA(applyDiff(clone(now||{}),base,want),want),now||{},"opening (save)");m.rev=((now&&now.rev)||0)+1;S=Object.assign(blank(),m);norm();return clone(S)})}else await docRef.set(clone(S))}
     if(readOnly)lastSynced=clone(srv||{});
     if(!readOnly)lastSynced=clone(S);keepLocal();
     for(const p of ["his","her"]){try{const a=await db.doc("couple/answers_"+p).get();if(a.exists){const d=a.data();S.survey[p].n=Object.assign({},S.survey[p].n||{},d.n||{})}}catch(e){}}

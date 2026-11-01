@@ -21,7 +21,7 @@ function lost(a,b,p='',out=[]){if(JSON.stringify(a)===JSON.stringify(b))return o
  await p.fill('#gp1','abcdefgh');await p.fill('#gp2','abcdefgh');await p.click('#ggo');await wait(3000);
  ok('app opens and signs in',await p.evaluate(()=>typeof sharedOn!=='undefined'&&sharedOn===true));
  await p.evaluate(fx=>{S=Object.assign(blank(),JSON.parse(fx));S.roles={his:UID};localStorage.setItem('mn_me','his');norm();applyDeck();save()},fixture);await wait(2500);
- const snap=()=>p.evaluate(()=>{const c=JSON.parse(JSON.stringify(S));delete c.seenTabs;delete c.journey;return c});
+ const snap=()=>p.evaluate(()=>{const c=JSON.parse(JSON.stringify(S));delete c.seenTabs;delete c.journey;delete c.rev;delete c.s2h;return c});
  const base=await snap();
  // typed after load: survey topic, daily question, note
  await p.evaluate(()=>{svWho='his';svTheme(THEMES[0].id,'yes');svWho=null;const x=dqToday();x.his={a:'Sample daily answer',ts:Date.now()};S.notes.unshift({id:Date.now(),from:'his',to:'her',text:'Sample new note',date:new Date().toISOString()});save()});await wait(2000);

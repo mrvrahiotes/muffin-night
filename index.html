@@ -61,7 +61,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.7</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.8</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -420,6 +420,7 @@ const isObj=x=>x&&typeof x==="object"&&!Array.isArray(x);
 const idArr=x=>Array.isArray(x)&&x.length&&x.every(y=>isObj(y)&&y.id!=null);
 /* apply the changes between last and cur onto base (3-way merge) */
 function fillEA(m,c){if(!isObj(m)||!isObj(c))return m;Object.keys(c).forEach(k=>{const v=c[k];if(Array.isArray(v)&&!v.length&&m[k]===undefined)m[k]=[];else if(isObj(v)&&isObj(m[k]))fillEA(m[k],v)});return m}
+function guardSv(m,srv){try{if(!m||!srv||!m.survey||!srv.survey)return m;["his","her"].forEach(p=>{const a=m.survey[p],b=srv.survey[p],nb=svCount(b),na=svCount(a),w=(m.svWiped||{})[p];if(nb>=20&&na<nb*0.6&&!(w&&Date.now()-w<864e5)){const r=svMerge(JSON.parse(JSON.stringify(a||bSv())),b);m.survey[p]=r[0];if(b.done)m.survey[p].done=true}})}catch(e){}return m}
 function applyDiff(base,last,cur){if(!isObj(base))base={};last=isObj(last)?last:{};cur=isObj(cur)?cur:{};
  const keys=new Set([...Object.keys(last),...Object.keys(cur)]);
  keys.forEach(k=>{const l=last[k],c=cur[k];if(same(l,c))return;if(l===undefined&&Array.isArray(c)&&!c.length)return;
@@ -510,7 +511,7 @@ async function boot(){
     else if(srv&&local){merged=fillMissing(clone(srv),local)}
     else merged=clone(srv||local||S);
     if(!last){const before=JSON.stringify(merged);rescueDrafts(merged);if(JSON.stringify(merged)!==before||(local&&srv&&!same(merged,srv)))setTimeout(()=>setSave("Recovered answers from this phone"),50)}
-    S=Object.assign(blank(),merged);norm();
+    merged=guardSv(merged,srv);S=Object.assign(blank(),merged);norm();
     if(!readOnly&&(!srv||!same(merged,srv))){lastWrite=Date.now();await docRef.set(clone(S))}
     if(readOnly)lastSynced=clone(srv||{});
     if(!readOnly)lastSynced=clone(S);keepLocal();
@@ -518,7 +519,7 @@ async function boot(){
     applyDeck();sharedOn=true;render();setTimeout(svGuard,2000);if(readOnly)roNotice();else setSave("Saved · shared between you two");
     docRef.onSnapshot(snapH=sn=>{if(!sn.exists)return;const m=sn.metadata||{};if(m.hasPendingWrites)return;if(syncing){pendingSnap=sn;return}
       const srv2=sn.data();if(same(srv2,lastSynced))return;
-      const mergedS=fillEA(applyDiff(clone(srv2),lastSynced,S),S);lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();
+      const mergedS=guardSv(fillEA(applyDiff(clone(srv2),lastSynced,S),S),srv2);lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();
       if(!same(mergedS,srv2)&&!readOnly)save();
       const a=document.activeElement;if(a&&/TEXTAREA|INPUT|SELECT/.test(a.tagName))return;render()},()=>{});
   }catch(e){setSave("Saved on this phone only")}
@@ -533,7 +534,7 @@ const HOLDER="p"+Math.random().toString(36).slice(2);
 async function lockDoc(){if(!docRef||typeof docRef.acquire!=="function")return;for(let i=0;i<24;i++){try{const r=await docRef.acquire({holder:HOLDER,ttlMs:1500});if(!r||r.acquired)return}catch(e){return}await new Promise(r=>setTimeout(r,150+Math.random()*200))}}
 async function sync(){if(readOnly){roNotice();return}if(syncing){again=true;return}syncing=true;
   try{await lockDoc();const cur=clone(S);const snap=await docRef.get();const srv=snap.exists?snap.data():{};
-    const merged=fillEA(applyDiff(clone(srv),lastSynced||{},cur),cur);lastWrite=Date.now();await docRef.set(clone(merged));
+    const merged=guardSv(fillEA(applyDiff(clone(srv),lastSynced||{},cur),cur),srv);lastWrite=Date.now();await docRef.set(clone(merged));
     S=Object.assign(blank(),applyDiff(clone(merged),cur,S));norm();lastSynced=clone(merged);keepLocal();applyDeck();
     setSave("Saved · shared between you two")}
   catch(e){setSave("Couldn't sync. Saved on this phone; it will retry on your next change.")}
@@ -794,6 +795,10 @@ let svRedoAsk=null;function svRedo(p){if(svRedoAsk!==p){svRedoAsk=p;render();ret
 function themeLabel(p,id){const x=(S.survey[p].t||{})[id];return x}
 function vSurvey(){
  const H=S.survey.his,Hr=S.survey.her;
+ if(!svWho&&svLost)return vSurvey2().replace('<div class="stack">','<div class="stack">'+svLostCard(me()));
+ return vSurvey2()}
+function vSurvey2(){
+ const H=S.survey.his,Hr=S.survey.her;
  if(svWho){
   const me=S.survey[svWho],nm=svWho==="his"?"His":"Her";me.t=me.t||{};
   const hdr=(t,sub)=>`<div><p class="lbl">${nm} survey · ${svStep+1} of ${SV_TOTAL}</p><h2>${t}</h2><p class="note">${sub}</p></div>`;
@@ -1039,7 +1044,7 @@ async function svGuard(){try{if(!CK||typeof DB==="undefined"||!DB)return;const d
   if(b&&b.n>=20&&n<b.n*0.6){svLost=svLost||{};svLost[p]=b.n-n}
   if(n>=20&&(!b||n>=b.n||Date.now()-(b.ts||0)>7*864e5&&n>=b.n*0.9)){upd[p]={ts:Date.now(),n,sv:JSON.parse(JSON.stringify(cur))};ch=true}});
  if(ch){Object.assign(SVB,upd);await DB.doc("couple/svbak").set(SVB)}if(svLost)render()}catch(e){}}
-function svRestoreSnap(){if(!SVB)return;let tot=0;Object.keys(svLost||{}).forEach(p=>{if(SVB[p]){const [c,n]=svMerge(S.survey[p],SVB[p].sv);S.survey[p]=c;tot+=n}});svLost=null;norm();applyDeck();save();render();mnToast(`Restored ${tot} survey answers. Nothing newer was changed.`)}
+function svRestoreSnap(){if(!SVB)return;let tot=0;Object.keys(svLost||{}).forEach(p=>{if(SVB[p]){const [c,n]=svMerge(S.survey[p],SVB[p].sv);S.survey[p]=c;tot+=n}});svLost=null;norm();applyDeck();save();render();rtoast(`Restored ${tot} survey answers. Nothing newer was changed.`)}
 function svLostCard(m){if(!svLost)return "";const ps=Object.keys(svLost);return `<div class="card" style="border-color:var(--accent)"><p class="lbl">Survey answers missing</p><p class="note" style="margin-top:4px">${ps.map(p=>(p===m?"Your":p==="her"?"Her":"His")+` survey is missing about ${svLost[p]} answers`).join(", ")} compared with the copy saved automatically. Bring them back? Anything answered since stays as it is.</p><div class="grid2" style="margin-top:8px"><button onclick="svLost=null;render()">Not now</button><button class="primary" onclick="svRestoreSnap()">Restore</button></div></div>`}
 function svMerge(cur,old){cur=cur||bSv();const o=renameDeep(JSON.parse(JSON.stringify(old||{})));let n=0;
  ["a","t","g"].forEach(k=>{const A=cur[k]=cur[k]||{};Object.keys(o[k]||{}).forEach(v=>{if(A[v]===undefined){A[v]=o[k][v];n++}})});
@@ -2131,7 +2136,7 @@ function apartCard(){const a=S.apart;const cam=!topicOff("camera");return `<div 
 let acctStep=null,acctBusy=false;
 function myAnswers(m){const o={};["survey","pulse","demo","rate","lread","prof"].forEach(k=>{if(S[k]&&S[k][m]!==undefined)o[k]=S[k][m]});o.dailyQuestions=Object.entries(S.dq||{}).map(([d,x])=>x[m]?{date:d,q:x.q,a:x[m].a}:null).filter(Boolean);o.side=m;o.exported=new Date().toISOString();return o}
 async function dlMine(){const m=me();try{const dl=await MN.use("downloads");await dl.save({filename:"muffin-night-my-answers-"+today()+".json",data:JSON.stringify(myAnswers(m),null,1)});rtoast("Saved your own answers")}catch(e){rtoast("Couldn't save the file.",true)}}
-function wipeMine(m){S.survey=S.survey||{};S.survey[m]=bSv();["pulse","demo","rate","lread","statsOpt","jdone","stTh","statsSv"].forEach(k=>{if(S[k])delete S[k][m]});if(S.roles)delete S.roles[m];Object.values(S.dq||{}).forEach(x=>{delete x[m]})}
+function wipeMine(m){S.svWiped=Object.assign({},S.svWiped,{[m]:Date.now()});S.survey=S.survey||{};S.survey[m]=bSv();["pulse","demo","rate","lread","statsOpt","jdone","stTh","statsSv"].forEach(k=>{if(S[k])delete S[k][m]});if(S.roles)delete S.roles[m];Object.values(S.dq||{}).forEach(x=>{delete x[m]})}
 function clearLocal(){try{Object.keys(localStorage).filter(k=>k.indexOf("mn_")===0).forEach(k=>localStorage.removeItem(k))}catch(e){}}
 async function flushNow(){try{clearTimeout(saveTimer);await sync()}catch(e){}}
 async function leaveSpace(){if(acctBusy)return;acctBusy=true;const m=me();try{wipeMine(m);S.split={by:m,ts:Date.now(),kind:"left"};await flushNow();

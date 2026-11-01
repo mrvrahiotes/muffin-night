@@ -72,6 +72,14 @@ function lost(a,b,p='',out=[]){if(JSON.stringify(a)===JSON.stringify(b))return o
  // odd or damaged data can't freeze the app
  const hang=await Promise.race([p.evaluate(()=>{const old=JSON.parse(JSON.stringify(S));S.dates=[{id:1,rule:'rule:x'},{id:2,md:'garbage'},{id:3}];try{tabNow='home';render()}catch(e){}S=old;render();return 'ok'}),new Promise(r=>setTimeout(()=>r('frozen'),8000))]);
  ok('damaged dates do not freeze the app',hang==='ok');
+ // the server copy loses several entries at once: this phone puts them back, and a single delete still works
+ const g=await p.evaluate(async()=>{const r=docRef;const d=(await r.get()).data();const n0=S.notes.length;d.notes=d.notes.slice(5);d.prof={};await r.set(d);
+  await new Promise(x=>setTimeout(x,300));return n0});
+ await p.reload();await wait(3500);
+ ok('server losing several notes and a profile: phone restores them',await p.evaluate(n0=>S.notes.length>=n0&&leafN(S.prof)>0,g));
+ const one=await p.evaluate(async()=>{const n=S.notes.length;S.notes=S.notes.slice(1);save();await new Promise(x=>setTimeout(x,1500));return [n,S.notes.length]});
+ await p.reload();await wait(3500);
+ ok('deleting one note still works',await p.evaluate(one=>S.notes.length===one[0]-1,one));
  // every main screen draws without an error
  const bad=await p.evaluate(()=>{const out=[];TABS.forEach(([t])=>{try{tabNow=t;render()}catch(e){out.push(t+': '+e.message)}});tabNow='home';render();return out});
  ok('every screen draws',!bad.length,bad.join('; '));

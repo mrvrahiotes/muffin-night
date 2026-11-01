@@ -51,7 +51,8 @@ const shClean=v=>JSON.parse(JSON.stringify(v));
 function docAdapter(p){const real=mapPath(p);if(!real)return {get:async()=>({exists:false,data:()=>null,metadata:{}}),set:async()=>{},update:async()=>{},onSnapshot:()=>()=>{},acquire:async()=>({acquired:true}),delete:async()=>{}};
  const r=fdb.doc(real),isFb=p.indexOf('feedback/')===0;const wrap=s=>({exists:s.exists,data:()=>s.data(),metadata:s.metadata||{}});
  return {get:async()=>wrap(await r.get()),set:async v=>r.set(isFb?Object.assign(shClean(v),{uid:FB_USER.uid,cid:FB_CID,email:FB_USER.email||''}):shClean(v)),update:async v=>r.set(shClean(v),{merge:true}),
-  onSnapshot:(fn,err)=>r.onSnapshot(s=>fn(wrap(s)),err||(()=>{})),acquire:async()=>({acquired:true}),delete:async()=>r.delete()}}
+  onSnapshot:(fn,err)=>r.onSnapshot(s=>fn(wrap(s)),err||(()=>{})),acquire:async()=>({acquired:true}),delete:async()=>r.delete(),
+  tx:fn=>fdb.runTransaction(async t=>{const sn=await t.get(r);const nv=await fn(sn.exists?sn.data():null);t.set(r,shClean(nv));return true})}}
 const dbAdapter={doc:docAdapter,collection:c=>({get:async()=>{const q=await fdb.collection(c).get();return {docs:q.docs.map(d=>({data:()=>d.data()}))}}})};
 const userAdapter={can:async()=>true,isOwner:async()=>ADMIN_EMAILS.includes(String(FB_USER&&FB_USER.email||'').toLowerCase()),id:async()=>FB_USER.uid};
 const dlAdapter={save:async({filename,data})=>{const b=new Blob([data],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}};
@@ -61,7 +62,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 5.4</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 5.6</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -463,7 +464,8 @@ function normRec(t){return String(t||"").toUpperCase().replace(/[^A-Z0-9]/g,"")}
 function encRef(ref){const wrap=async sn=>{if(!sn.exists)return {exists:false,data:()=>null,metadata:sn.metadata};const d=await decWith(CK,sn.data());return {exists:true,data:()=>d,metadata:sn.metadata}};
  return {get:async()=>wrap(await ref.get()),set:async v=>ref.set(await encWith(CK,v)),
   update:async v=>{const g=await ref.get();const cur=g.exists?(await decWith(CK,g.data()))||{}:{};Object.keys(v).forEach(k=>{cur[k]=(cur[k]&&typeof cur[k]==="object"&&typeof v[k]==="object")?Object.assign({},cur[k],v[k]):v[k]});return ref.set(await encWith(CK,cur))},
-  onSnapshot:(fn,err)=>ref.onSnapshot(sn=>{wrap(sn).then(fn).catch(()=>{})},err),acquire:o=>ref.acquire(o),delete:()=>ref.delete()}}
+  onSnapshot:(fn,err)=>ref.onSnapshot(sn=>{wrap(sn).then(fn).catch(()=>{})},err),acquire:o=>ref.acquire(o),delete:()=>ref.delete(),
+  tx:fn=>ref.tx(async raw=>{const cur=raw&&raw.ct?await decWith(CK,raw):raw;return encWith(CK,await fn(cur))})}}
 function encDB(raw){return {doc:p=>/^couple\//.test(p)&&p!=="couple/meta"?encRef(raw.doc(p)):raw.doc(p),collection:c=>raw.collection(c)}}
 function gateUI(html){let g=document.getElementById('gate');if(!g){g=document.createElement('div');g.id='gate';g.style.cssText='position:fixed;inset:0;z-index:70;background:var(--bg);overflow:auto;padding:calc(32px + env(safe-area-inset-top,0px)) 16px 32px';document.body.appendChild(g)}g.innerHTML=`<div style="max-width:480px;margin:0 auto">${html}</div>`;return g}
 async function passGate(raw){let meta=null;try{const m=await raw.doc("couple/meta").get();meta=m.exists?m.data():null}catch(e){}
@@ -518,15 +520,15 @@ async function boot(){
     if(migr&&srv)merged.s2h=hsh(srv);
     if(!migr){try{const o2=await db.doc("couple/state2").get();if(o2.exists){const d2=o2.data(),h2=hsh(d2);if(d2&&h2!==merged.s2h){fillMissing(merged,d2);merged.s2h=h2;migr=true}}}catch(e){}}
     try{const lo=localStorage.getItem('mn_state');if(lo&&localStorage.getItem('mn_state3')){const hl=hsh(lo);if(String(hl)!==localStorage.getItem('mn_s1h')){fillMissing(merged,JSON.parse(lo));localStorage.setItem('mn_s1h',String(hl));migr=true}}}catch(e){}
-    merged=guardSv(merged,srv);S=Object.assign(blank(),merged);norm();
-    if(!readOnly&&(migr||!srv||!same(merged,srv))){lastWrite=Date.now();await docRef.set(clone(S))}
+    merged=guardSv(merged,srv);if(srv)guardAll(merged,srv,"opening (vs server)");if(local&&srv)guardAll(merged,local,"opening (vs this phone)");S=Object.assign(blank(),merged);norm();dwatch("opening");
+    if(!readOnly&&(migr||!srv||!same(merged,srv))){lastWrite=Date.now();const want=clone(S),base=clone(srv||{});if(docRef.tx){await docRef.tx(async now=>{const m=guardAll(fillEA(applyDiff(clone(now||{}),base,want),want),now||{},"opening (save)");m.rev=((now&&now.rev)||0)+1;S=Object.assign(blank(),m);norm();return clone(S)})}else await docRef.set(clone(S))}
     if(readOnly)lastSynced=clone(srv||{});
     if(!readOnly)lastSynced=clone(S);keepLocal();
     for(const p of ["his","her"]){try{const a=await db.doc("couple/answers_"+p).get();if(a.exists){const d=a.data();S.survey[p].n=Object.assign({},S.survey[p].n||{},d.n||{})}}catch(e){}}
     applyDeck();sharedOn=true;render();setTimeout(svGuard,2000);setTimeout(dayBackup,4000);setTimeout(pdSync,2500);setInterval(dayBackup,10*60*1000);checkUpdate();if(readOnly)roNotice();else setSave("✓ Saved · shared between you two");
     docRef.onSnapshot(snapH=sn=>{if(!sn.exists)return;const m=sn.metadata||{};if(m.hasPendingWrites)return;if(syncing){pendingSnap=sn;return}
-      const srv2=sn.data();if(same(srv2,lastSynced))return;
-      const mergedS=guardSv(fillEA(applyDiff(clone(srv2),lastSynced,S),S),srv2);lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();
+      const srv2=sn.data();if(same(srv2,lastSynced))return;if(srv2&&lastSynced&&(srv2.rev||0)<=(lastSynced.rev||0)&&lastSynced.rev)return;
+      const mergedS=guardAll(guardSv(fillEA(applyDiff(clone(srv2),lastSynced,S),S),srv2),S,"receiving partner's changes");lastSynced=clone(srv2);S=Object.assign(blank(),mergedS);norm();applyDeck();keepLocal();dwatch("receiving partner's changes");
       if(!same(mergedS,srv2)&&!readOnly)save();
       const a=document.activeElement;if(a&&/TEXTAREA|INPUT|SELECT/.test(a.tagName))return;render()},()=>{});
   }catch(e){errReport("boot",e);setSave("Saved on this phone only")}
@@ -540,9 +542,10 @@ let snapH=null,pendingSnap=null;
 const HOLDER="p"+Math.random().toString(36).slice(2);
 async function lockDoc(){if(!docRef||typeof docRef.acquire!=="function")return;for(let i=0;i<24;i++){try{const r=await docRef.acquire({holder:HOLDER,ttlMs:1500});if(!r||r.acquired)return}catch(e){return}await new Promise(r=>setTimeout(r,150+Math.random()*200))}}
 async function sync(){if(readOnly){roNotice();return}if(syncing){again=true;return}syncing=true;
-  try{await lockDoc();const cur=clone(S);const snap=await docRef.get();const srv=snap.exists?snap.data():{};
-    const merged=guardSv(fillEA(applyDiff(clone(srv),lastSynced||{},cur),cur),srv);lastWrite=Date.now();await docRef.set(clone(merged));
-    S=Object.assign(blank(),applyDiff(clone(merged),cur,S));norm();lastSynced=clone(merged);keepLocal();applyDeck();
+  try{await lockDoc();const cur=clone(S);let merged=null;
+    const mk=srv=>{srv=srv||{};return guardAll(guardAll(guardSv(fillEA(applyDiff(clone(srv),lastSynced||{},cur),cur),srv),srv,"saving (vs server)"),cur,"saving (vs this phone)")};
+    lastWrite=Date.now();if(docRef.tx)await docRef.tx(async srv=>{merged=mk(srv);merged.rev=((srv&&srv.rev)||0)+1;return clone(merged)});else{const snap=await docRef.get();merged=mk(snap.exists?snap.data():{});await docRef.set(clone(merged))}
+    S=Object.assign(blank(),applyDiff(clone(merged),cur,S));norm();lastSynced=clone(merged);keepLocal();applyDeck();dwatch("saving");
     syncFails=0;lastOkSave=Date.now();setSave("✓ Saved · shared between you two")}
   catch(e){syncFails++;errReport("sync",e);setSave("Couldn't sync yet. Saved on this phone; retrying…");clearTimeout(syncRetryT);syncRetryT=setTimeout(()=>{if(!syncing)sync()},Math.min(60000,5000*syncFails))}
   syncing=false;if(again){again=false;sync()}else if(pendingSnap&&snapH){const x=pendingSnap;pendingSnap=null;try{snapH(x)}catch(e){}}}
@@ -1072,7 +1075,7 @@ async function restoreMissing(){if(bkBusy||!DB)return;bkBusy=true;render();let t
  norm();applyDeck();save();tot=JSON.stringify(S).length-before}catch(e){}bkBusy=false;render();rtoast(tot>20?"Brought back what was missing. Nothing newer was changed.":"Nothing was missing.")}
 function bkAutoCard(){return `<div class="card"><p class="lbl">Automatic backups</p><p class="note" style="margin-top:4px">Everything you two enter is backed up automatically each day, locked with your passphrase, for the last 10 days.</p><button class="full" style="margin-top:8px" onclick="restoreMissing()">${bkBusy?'Checking…':'Bring back anything missing'}</button><p class="note" style="margin-top:6px">Only fills in what's gone. Nothing you've changed since is touched.</p></div>`}
 /* ---------- auto update ---------- */
-const APP_V="5.4";let updBusy=false;
+const APP_V="5.6";let updBusy=false;
 async function checkUpdate(){if(updBusy||location.protocol==="file:")return;try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();if(j&&j.v&&j.v!==APP_V&&parseFloat(j.v)>parseFloat(APP_V)){updBusy=true;try{clearTimeout(saveTimer);await sync()}catch(e){}const b=document.createElement('div');b.style.cssText='position:fixed;inset:0;z-index:99;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px';b.textContent='Updating Muffin Night…';document.body.appendChild(b);setTimeout(()=>location.reload(),600)}}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkUpdate()});setInterval(checkUpdate,10*60*1000);
 
@@ -1083,6 +1086,22 @@ function errReport(where,e){try{if(errN>=15||typeof fdb==="undefined"||!FB_USER)
 window.addEventListener("error",ev=>errReport("js "+String(ev.filename||"").split("/").pop()+":"+(ev.lineno||""),ev.error||ev.message));
 window.addEventListener("unhandledrejection",ev=>errReport("promise",ev.reason));
 let syncFails=0,syncRetryT=null,lastOkSave=0;
+
+/* ---------- loss guard: never let several entries vanish at once ---------- */
+const GUARD_SKIP=new Set(["current","journey","seenTabs","split","anon","anonStart","s2h","svWiped","roles","reports","plan","thInv","thInvNo","snooze"]);
+const GUARD_OBJ=new Set(["prof","faves","sizes","dq","wk","pfav","rpfav","added","demo","pulse"]);
+function leafN(x){if(x==null)return 0;if(typeof x==="string")return x.trim()?1:0;if(typeof x!=="object")return 0;let n=0;for(const k in x)n+=leafN(x[k]);return n}
+function guardAll(m,ref,where){const fixed=[];try{if(!isObj(m)||!isObj(ref))return m;
+ Object.keys(ref).forEach(k=>{if(GUARD_SKIP.has(k)||k==="survey")return;const r=ref[k],c=m[k];
+  if(idArr(r)){const ids=new Set((Array.isArray(c)?c:[]).map(x=>x&&x.id));const gone=r.filter(x=>!ids.has(x.id));const dels=new Set(((m.dels||{})[k])||[]);const real=gone.filter(x=>!dels.has(x.id));
+   if(real.length>=2){m[k]=(Array.isArray(c)?c:[]).concat(real).sort((a,b)=>(b.id||0)-(a.id||0));fixed.push(k+" "+real.length)}}
+  else if(isObj(r)&&GUARD_OBJ.has(k)){const a=leafN(r),b=leafN(c);if(a-b>=2){m[k]=isObj(c)?c:{};fillMissing(m[k],r);fixed.push(k+" "+(a-b))}}});
+ if(fixed.length)dlog("blocked "+where+": "+fixed.join(", "),true)}catch(e){}return m}
+function dcounts(o){o=o||{};const L=k=>Array.isArray(o[k])?o[k].length:0;const sv=p=>svCount(o.survey&&o.survey[p]);return {notes:L("notes"),mems:L("mems"),wish:L("wish"),dates:L("dates"),dreams:L("dreams"),vids:L("vids"),prof:leafN(o.prof),faves:leafN(o.faves),sizes:leafN(o.sizes),dq:leafN(o.dq),wk:leafN(o.wk),svHis:sv("his"),svHer:sv("her")}}
+let dPrev=null;
+function dlog(msg,send){try{const L=JSON.parse(localStorage.getItem("mn_dlog")||"[]");L.push(new Date().toLocaleString()+" · v"+APP_V+" · "+(me()||"?")+" · "+msg);while(L.length>60)L.shift();localStorage.setItem("mn_dlog",JSON.stringify(L))}catch(e){}if(send)errReport("data",{message:msg})}
+function dwatch(where){try{const c=dcounts(S);if(dPrev){const drops=Object.keys(c).filter(k=>c[k]<dPrev[k]).map(k=>k+" "+dPrev[k]+"→"+c[k]);const big=Object.keys(c).some(k=>dPrev[k]-c[k]>=2);if(drops.length)dlog("drop after "+where+": "+drops.join(", "),big)}dPrev=c}catch(e){}}
+function dlogCard(){let L=[];try{L=JSON.parse(localStorage.getItem("mn_dlog")||"[]")}catch(e){}const c=dcounts(S);return `<div class="card"><p class="lbl">Data check</p><p class="note" style="margin-top:4px">Counts only, no content. If anything ever goes missing, this shows when and how.</p><p class="note" style="margin-top:6px">Now: ${Object.entries(c).map(([k,v])=>k+" "+v).join(" · ")}</p>${L.length?`<div style="margin-top:6px;max-height:220px;overflow:auto">${L.slice().reverse().map(x=>`<p class="note" style="margin:2px 0;word-break:break-word">${esc(x)}</p>`).join("")}</div>`:`<p class="note" style="margin-top:6px">Nothing has gone missing since this check started.</p>`}</div>`}
 function svMerge(cur,old){cur=cur||bSv();const o=renameDeep(JSON.parse(JSON.stringify(old||{})));let n=0;
  ["a","t","g"].forEach(k=>{const A=cur[k]=cur[k]||{};Object.keys(o[k]||{}).forEach(v=>{if(A[v]===undefined){A[v]=o[k][v];n++}})});
  const N=cur.n=cur.n||{};Object.keys(o.n||{}).forEach(k=>{if(!String(N[k]||"").trim()&&String(o.n[k]||"").trim()){N[k]=o.n[k];n++}});
@@ -2197,7 +2216,7 @@ async function deleteAccount(){if(acctBusy)return;acctBusy=true;try{
  try{await FB_USER.delete()}catch(e){if(e&&/recent-login/.test(e.code||"")){await fauth.signOut();clearLocal();alertLater("Your data is deleted. To finish removing your sign-in, sign in once more and choose Delete my account again.");location.reload();return}}
  clearLocal();try{await fauth.signOut()}catch(e){}location.reload()}catch(e){acctBusy=false;rtoast("Couldn't delete: "+(e&&e.message||e),true)}}
 function alertLater(t){try{sessionStorage.setItem("mn_msg",t)}catch(e){}}
-function acctCard2(){if(!FB_USER)return "";return bkAutoCard()+acctCard2b()}
+function acctCard2(){if(!FB_USER)return "";return dlogCard()+bkAutoCard()+acctCard2b()}
 function acctCard2b(){const m=me(),o=m==="her"?"his":"her",On=o==="her"?"her":"him",two=FB_MEMBERS>=2;
  const btn=(id,t,cls)=>`<button class="${cls||''} full" style="margin-top:6px" onclick="acctStep='${id}';render();window.scrollTo(0,document.body.scrollHeight)">${t}</button>`;
  let h=`<div class="card"><p class="lbl">Your account and data</p><p class="note" style="margin-top:4px">Your data belongs to you two. You can take a copy, leave, or delete it anytime.</p><div class="grid2" style="margin-top:8px"><button onclick="exportData()">Full backup</button><button onclick="dlMine()">Just my answers</button></div><button class="full" style="margin-top:6px" onclick="document.getElementById('svG').click()">Bring back missing items from a backup file</button><p class="note" style="margin-top:4px">Survey, memories, notes, wish lists, dates, profiles and the rest, for both of you. Fills in only what's missing now; nothing newer gets overwritten.</p>`;

@@ -61,7 +61,7 @@ function inviteText(){return "Join me on Muffin Night! Open https://mrvrahiotes.
 async function copyCode(){try{await navigator.clipboard.writeText(codeFmt());(window.mnToast||alert)("Code copied: "+codeFmt())}catch(e){(window.mnToast||alert)("Your code is "+codeFmt())}}
 async function shareInvite(){const t=inviteText();if(navigator.share){try{await navigator.share({text:t});return}catch(e){if(e&&e.name==="AbortError")return}}try{await navigator.clipboard.writeText(t);(window.mnToast||alert)("Invite copied. Paste it into a text.")}catch(e){}}
 function codeBtns(){return FB_CODE?`<div class="grid2" style="margin-top:8px"><button onclick="copyCode()">Copy code</button><button class="primary" onclick="shareInvite()">Send invite</button></div>`:""}
-function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 4.9</p></div>`}
+function acctCard(){if(!FB_USER)return "";return `<div class="card"><p class="lbl">Your account</p><p class="note" style="margin-top:4px">Signed in as ${shEsc(FB_USER.email||'')}.</p>${FB_CODE?`<p class="note" style="margin-top:4px">Couple code: <b style="color:var(--fg);letter-spacing:.08em">${FB_CODE.slice(0,4)}-${FB_CODE.slice(4)}</b>. Your partner uses this to join.</p>${codeBtns()}`:''}<button style="margin-top:8px" onclick="fauth.signOut().then(()=>location.reload())">Sign out</button><p class="lbl" style="margin-top:12px">Your names (optional)</p><div class="grid2" style="margin-top:4px"><div><label class="note" for="nmher">Hers</label><input id="nmher" value="${shEsc((S.names||{}).her||'')}" onchange="S.names=S.names||{};S.names.her=this.value.trim();save();render()"></div><div><label class="note" for="nmhis">His</label><input id="nmhis" value="${shEsc((S.names||{}).his||'')}" onchange="S.names=S.names||{};S.names.his=this.value.trim();save();render()"></div></div>${statsToggle()}<p class="note" style="margin-top:8px">App version 5.0</p></div>`}
 
 </script></head><body>
 <title>Muffin Night</title>
@@ -448,7 +448,7 @@ async function ansFlush(p){if(!DB||ansBusy[p])return;const q=ansQ[p];if(!q||!Obj
  ansBusy[p]=false;if(ansQ[p]&&Object.keys(ansQ[p]).length)ansFlush(p)}
 let ansTimer={};
 function ansQueue(p,k,v){ansQ[p]=ansQ[p]||{};ansQ[p][k]=v;ansStat[p+k]="Saving…";const e=document.getElementById('st_'+k);if(e)e.textContent="Saving…";clearTimeout(ansTimer[p]);ansTimer[p]=setTimeout(()=>ansFlush(p),600)}
-function keepLocal(){try{localStorage.setItem('mn_state',JSON.stringify(S));if(lastSynced)localStorage.setItem('mn_last2',JSON.stringify(lastSynced))}catch(e){}}
+let localReady=false;function keepLocal(){if(!localReady)return;try{localStorage.setItem('mn_state',JSON.stringify(S));if(lastSynced)localStorage.setItem('mn_last2',JSON.stringify(lastSynced))}catch(e){}}
 /* ---------- couple passphrase encryption ---------- */
 let CK=null;const b64=u=>btoa(String.fromCharCode(...new Uint8Array(u))),unb64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
 async function deriveKey(pass,salt){const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass.normalize("NFKC")),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt:unb64(salt),iterations:210000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["encrypt","decrypt"])}
@@ -492,7 +492,7 @@ async function passGate(raw){let meta=null;try{const m=await raw.doc("couple/met
   draw()})}
 async function boot(){
   let local=null,last=null;
-  try{const raw=localStorage.getItem('mn_state');if(raw){local=JSON.parse(raw);S=Object.assign(blank(),local)}const lr=localStorage.getItem('mn_last2');if(lr)last=JSON.parse(lr)}catch(e){}
+  try{const raw=localStorage.getItem('mn_state');if(raw){local=JSON.parse(raw);S=Object.assign(blank(),local)}const lr=localStorage.getItem('mn_last2');if(lr)last=JSON.parse(lr)}catch(e){}localReady=true;
   norm();applyDeck();render();setSave("Saved on this phone");
   try{
     let db=await MN.use("db");const user=await MN.use("user");
@@ -507,6 +507,7 @@ async function boot(){
     if(!srv){try{const o=await db.doc("couple/state").get();if(o.exists)srv=o.data()}catch(e){}}
     if(!srv&&user){const id=await user.id();if(id){try{const old=await db.doc("data/users/"+id+"/game/state").get();if(old.exists)srv=old.data()}catch(e){}}}
     let merged;
+    if(local&&last&&JSON.stringify(local).length<JSON.stringify(last).length*0.5)last=null;
     if(srv&&local&&last)merged=applyDiff(clone(srv),last,local);
     else if(srv&&local){merged=fillMissing(clone(srv),local)}
     else merged=clone(srv||local||S);
@@ -525,7 +526,7 @@ async function boot(){
   }catch(e){setSave("Saved on this phone only")}
 }
 function save(){
-  keepLocal();if(readOnly){roNotice();return}
+  if(!localReady)return;keepLocal();if(readOnly){roNotice();return}
   if(!docRef)return;clearTimeout(saveTimer);setSave("Saving…");
   saveTimer=setTimeout(sync,500);
 }
@@ -2200,7 +2201,7 @@ function thInvCard(m,where){const v=S.thInv;const o=m==="her"?"his":"her",O=o===
 
 /* ---------- explore the app: unopened areas ---------- */
 const TAB_DESC={night:"Deal a night: five ways to start, cards picked for you two.",plan:"Plan a night, a surprise window, Spark reset, Touch reset.",swipe:"Swipe ideas; only mutual yeses show up.",td:"Truth or dare, from mild to wild.",dice:"Roll for an action, a place, and how long.",pos:"Positions library with setup and tips.",rp:"Role-play scenes with scripts.",ch:"90-day challenge and 37 themed challenges.",spark:"Send a spark or make a move.",notes:"Notes for things that are easier to write.",dreams:"Dreams for you, for us, for the bedroom.",rom:"Questions to ask each other, profiles, her cycle.",learn:"Short lessons, how-to guides, video library.",coach:"Private AI coach for advice.",week:"Fifteen-minute weekly check-in.",repair:"What to do during and after a fight, bonding talks.",aar:"Pillow talk after a night: how the app learns you.",mem:"Your best moments, and do-it-again cards.",us:"Your patterns, matches, and what you're into.",survey:"Your survey, and what each of you shared.",extras:"Missions, scavenger hunts, and more.",ideas:"Ideas for dates and nights.",wish:"Wish lists and little things: sizes, favorites.",deck:"Add your own cards, or remove ones you don't want.",guide:"Settings, account, help."};
-function seenTab(t){const m=me();if(!m)return;S.seenTabs=S.seenTabs||{};const x=(S.seenTabs[m]=S.seenTabs[m]||{});if(!x[t]){x[t]=1;save()}}
+function seenTab(t){const m=me();if(!m||!sharedOn)return;S.seenTabs=S.seenTabs||{};const x=(S.seenTabs[m]=S.seenTabs[m]||{});if(!x[t]){x[t]=1;save()}}
 function unexplored(m){const x=((S.seenTabs||{})[m])||{};return TABS.filter(([t])=>t!=="home"&&TAB_DESC[t]&&!x[t]&&uOpens(t)===0&&!tabOff(t))}
 let exAll=false;
 function exploreCard(m,full){if(!m)return "";const L=unexplored(m),tot=TABS.filter(([t])=>t!=="home"&&TAB_DESC[t]&&!tabOff(t)).length;if(!L.length)return full?`<div class="card"><p class="lbl">Explore the app</p><p class="note" style="margin-top:4px">You've opened every part of the app. 🎉</p></div>`:"";
